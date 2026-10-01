@@ -1,0 +1,30 @@
+{
+  "id": "portrait-1080x1920",
+  "label": "Portrait screen — DOCUMENTED STUB, NOT IMPLEMENTED",
+  "status": "stub",
+  "description": "Portrait totems and window displays. This file documents the intended contract; scripts/render-frames.mjs and the templates do not implement it yet. A build with this profile fails with a clear message rather than producing a broken video.",
+  "notImplemented": true,
+  "intended": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 25,
+    "duration": 12,
+    "loop": true,
+    "safeAreaPct": 0.05,
+    "template": "menu-board-portrait (does not exist yet)",
+    "blockers": [
+      "the menu-board template geometry is landscape-only: the item rows and the hero panel are placed with absolute pixel positions",
+      "item capacity drops to 2-3 at the 48 px item-name floor, so the compiler needs a paging plan (rotate items across the loop) instead of shrinking type",
+      "the legal strip needs a second layout pass: 32 px text over 1080 px width wraps differently"
+    ]
+  },
+  "video": {
+    "codec": "libx264",
+    "profile": "main",
+    "pixFmt": "yuv420p",
+    "crf": 18,
+    "preset": "medium",
+    "movflags": "+faststart",
+    "audio": false
+  }
+}

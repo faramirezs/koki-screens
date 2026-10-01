@@ -1,0 +1,10 @@
+node_modules/
+.venv/
+work/
+out/
+corpus/*
+!corpus/.gitkeep
+*.log
+__pycache__/
+*.pyc
+.env
