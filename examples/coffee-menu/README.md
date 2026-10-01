@@ -6,7 +6,13 @@ The smallest complete input for the generator: four drinks/snacks, no promo.
       --content examples/coffee-menu/content.json \
       --brand   examples/coffee-menu/brand.json \
       --photos  examples/coffee-menu/photos \
-      --out     out/coffee-menu
+      --out     out/coffee-menu \
+      --matting none
+
+`--matting none` matters here. The photos are JPEGs with no alpha channel, so the default
+`--matting auto` falls back to BiRefNet and spends about 90 s per photo (4 photos ≈ 6 min)
+before the build starts. `--matting none` finishes in about 90 s. Drop the flag when you
+want the promo cutout, or pass real pre-cut PNGs with `--matting alpha`.
 
 ## What this example demonstrates
 

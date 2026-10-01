@@ -9,7 +9,13 @@ promo loop.
       --content examples/ko-kitchen/content.json \
       --brand   examples/ko-kitchen/brand.json \
       --photos  examples/ko-kitchen/photos \
-      --out     out/ko-kitchen
+      --out     out/ko-kitchen \
+      --matting none
+
+`--matting none` keeps the build at about 90 s: the photos are JPEGs, so the default
+`--matting auto` falls back to BiRefNet at about 90 s per photo and the promo overlay uses
+the flat frame instead of a cutout. Pass pre-cut PNGs with `--matting alpha` when you want
+the cutout.
 
 ## Palette
 
@@ -25,6 +31,10 @@ promo loop.
 
 Because every colour is declared, extraction is skipped for this example. Extraction
 is still the fallback whenever a colour is missing.
+
+A successful build still prints warnings, and that is expected: leading tighter than the
+font's ink box, and text pairs between the 4.5:1 floor and the 7:1 preferred ratio. They
+are advisory. `report.ok` is the pass/fail signal.
 
 ## Promo
 

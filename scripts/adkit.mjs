@@ -155,7 +155,10 @@ export async function build({ profileId, contentPath, brandPath, photosDir, outR
     });
     await writeFile(tokensPath, tokensToCss(result));
     await writeFile(path.join(work, "palette.json"), JSON.stringify({ tokens: result.tokens, audit: result.audit, source: result.source }, null, 2));
-    for (const a of result.audit) if (a.adjusted) log.warn(`${a.pair}: repaired to ${a.ratio}:1`);
+    for (const a of result.audit) {
+      if (!a.preferred && a.pass) report.warnings.push(`${a.pair} contrast ${a.ratio}:1 — above the ${a.min}:1 floor, below the ${a.target}:1 preferred`);
+      else if (a.adjusted) log.warn(`${a.pair}: repaired to ${a.ratio}:1`);
+    }
     if (result.errors.length) throw Object.assign(new Error(result.errors.join("; ")), { code: EXIT.POLICY });
     return { source: result.source, audit: result.audit };
   });
@@ -371,4 +374,14 @@ async function main() {
   process.exit(Number.isInteger(failed[0].code) ? failed[0].code : EXIT.RENDER);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+// Errors raised before the stage runner (an unknown or stubbed profile, a content file that
+// is not valid JSON) are not wrapped by runStage, so they need a handler here. Without one,
+// Node printed a raw stack trace and exited 1 instead of the documented code.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((e) => {
+    log.fail(e.message);
+    if (process.env.SCREEN_AD_DEBUG) console.error(e.stack);
+    else log.info("re-run with SCREEN_AD_DEBUG=1 for the stack trace");
+    process.exit(Number.isInteger(e.code) ? e.code : EXIT.INPUT);
+  });
+}

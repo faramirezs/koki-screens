@@ -48,6 +48,19 @@ raster flags (`--disable-partial-raster`, `--num-raster-threads=1`,
 render from 49 s to past the 300 s `protocolTimeout`, and the last pair hung the very
 first screenshot.
 
+**The palette stage fails with `cannot be repaired`.** Two different situations.
+If `brand.json` declares the colour, fix it: it has no legible partner at the 4.5:1 floor
+even after moving its lightness. If `palette.json` says `"extractionUsed": true`, the colour
+came from the photos and there is nothing in `brand.json` to fix - declare the palette
+explicitly (copy the shape from `examples/ko-kitchen/brand.json`) or use different photos.
+A ratio between 4.5:1 and the preferred 7:1 is a warning, never a failure (D34); if it
+fails, the brand has raised `rules.minContrast` above what the colours can reach.
+
+**The build takes minutes in `process images`.** The default `--matting auto` falls back to
+BiRefNet when the photos have no alpha channel, which is every JPEG: about 90 s per photo.
+Pass `--matting none` for a smoke build, `--matting alpha` with pre-cut PNGs for a real one,
+or `--skip-images` to reuse the image report from the previous run.
+
 **The loop seam fails.** A base-scene beat used an in/out preset, so the board is not
 settled at t=0, or the overlay's `fadeOut` finishes after `duration`. See
 `references/timeline-model.md`. Re-check without re-rendering:

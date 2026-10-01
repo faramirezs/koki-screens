@@ -201,20 +201,34 @@ export async function buildPalette({ imagesReport, brand, theme = "dark", minCon
   // ---- contrast audit (and repair) ---------------------------------------
   const audit = [];
   const errors = [];
+  // `floor` is the hard minimum and `target` is what the repair aims for. They are not the
+  // same number: WCAG AA is 4.5:1, and 7:1 (AAA) is preferred for body copy. A pair that
+  // lands between the two is reported as a warning and must not fail the build - enforcing
+  // 7:1 as a floor failed a legitimate extraction palette at 6.87:1.
   for (const [fgKey, bgKey, need] of CONTRAST_PAIRS) {
-    const min = Math.max(need, minContrast);
+    const floor = minContrast;
+    const target = Math.max(need, minContrast);
+    const pair = `${fgKey}/${bgKey}`;
     const before = contrast(tokens[fgKey], tokens[bgKey]);
-    if (before >= min) {
-      audit.push({ pair: `${fgKey}/${bgKey}`, ratio: Number(before.toFixed(2)), min, pass: true, adjusted: false });
+    if (before >= target) {
+      audit.push({ pair, ratio: Number(before.toFixed(2)), min: floor, target, pass: true, preferred: true, adjusted: false });
       continue;
     }
-    const fixed = fixContrast(tokens[fgKey], tokens[bgKey], min);
-    audit.push({ pair: `${fgKey}/${bgKey}`, ratio: Number(fixed.ratio.toFixed(2)), before: Number(before.toFixed(2)), min, pass: fixed.ratio >= min, adjusted: fixed.adjusted });
-    if (fixed.ratio >= min) {
-      tokens[fgKey] = fixed.hex;
-      log.warn(`palette: ${fgKey} on ${bgKey} was ${before.toFixed(2)}:1, moved to ${fixed.hex} (${fixed.ratio.toFixed(2)}:1)`);
+    const fixed = fixContrast(tokens[fgKey], tokens[bgKey], target);
+    // Never make a pair worse than it already was.
+    const best = Math.max(before, fixed.ratio);
+    const bestHex = fixed.ratio >= before ? fixed.hex : tokens[fgKey];
+    const adjusted = bestHex !== tokens[fgKey];
+    audit.push({ pair, ratio: Number(best.toFixed(2)), before: Number(before.toFixed(2)), min: floor, target, pass: best >= floor, preferred: best >= target, adjusted });
+    if (best < floor) {
+      errors.push(`${fgKey} on ${bgKey} is ${before.toFixed(2)}:1 and cannot be repaired by moving lightness (needs ${floor}:1)`);
+      continue;
+    }
+    if (adjusted) tokens[fgKey] = bestHex;
+    if (best >= target) {
+      log.warn(`palette: ${fgKey} on ${bgKey} was ${before.toFixed(2)}:1, moved to ${bestHex} (${best.toFixed(2)}:1)`);
     } else {
-      errors.push(`${fgKey} on ${bgKey} is ${before.toFixed(2)}:1 and cannot be repaired by moving lightness (needs ${min}:1)`);
+      log.warn(`palette: ${fgKey} on ${bgKey} is ${best.toFixed(2)}:1 — above the ${floor}:1 floor, below the ${target}:1 preferred${adjusted ? ` (moved to ${bestHex})` : ""}`);
     }
   }
 

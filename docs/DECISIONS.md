@@ -310,6 +310,33 @@ Also rejected: `--disable-partial-raster --disable-threaded-animation
 then hung the very first screenshot for the full 300 s, so `launchArgs` is back to the
 original set and the barrier does the work in userspace.
 
+**D32c - Errors thrown before the stage runner escaped as a stack trace.**
+`main()` was called without a catch, so an error raised outside `runStage` - a stubbed
+profile, an unknown profile, a content file that is not JSON - rejected the promise and
+Node printed a raw stack trace with exit 1. The stub-profile message is written to be
+actionable, so the user got a wall of stack instead of the blockers and the wrong exit
+code. There is now a handler that prints `e.message` and exits with `e.code` when it is an
+integer, and `SCREEN_AD_DEBUG=1` prints the stack. `tests/cli.test.mjs` pins the exit codes
+for the stub profile (3), an unknown profile (3), a missing flag (3) and invalid JSON (1).
+
+**D34 - The preferred contrast ratio was enforced as a floor.**
+`CONTRAST_PAIRS` gives the three body-text pairs a `need` of 7, and the audit took
+`min = Math.max(need, minContrast)` and treated that as pass/fail. So a palette that
+measured 6.87:1 failed the build with exit 6, even though SKILL.md, references/video-spec.md
+and `profiles/landscape-1080p.json` all say 4.5:1 is the floor and 7:1 is preferred. Found
+by the standalone acceptance run: `examples/coffee-menu` declares no colours, so the
+palette is extracted from the photos, the extracted surface `#595B56` against `#FFFFFF`
+gives 6.87:1, and the first example a new consumer is told to build could not be built at
+all (`--allow-violations` does not cover the palette stage).
+The audit now carries two numbers: `min` (the floor, `minContrast`, default 4.5) decides
+pass/fail, and `target` (`max(need, minContrast)`) is what `fixContrast` aims for. A pair
+that lands between them passes, is reported as a warning, and is kept if the repair could
+not reach the target - the repair never makes a pair worse than it already was. Note that
+with a 4.5 floor the error branch is nearly unreachable: for any solid background either
+black or white clears 4.5:1 (the worst case is a mid-grey background, where the best of the
+two is 4.58:1). It stays reachable for a brand that declares a higher floor, which
+`tests/palette.test.mjs` pins.
+
 **D33 - The audit findings and the uncertainty list are deduplicated and populated.**
 `summariseChecks` collected findings at three moments in the loop, so the same element was
 reported up to three times with a different `t=` prefix: 49 warnings for 17 real problems.
