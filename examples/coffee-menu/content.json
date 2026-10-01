@@ -1,0 +1,56 @@
+{
+  "language": "de",
+  "title": "Kaffee",
+  "subtitle": "Hausröstung, täglich frisch",
+  "badge": "Heute · Donnerstag",
+  "hours": "MO–FR 08:00–18:00",
+  "items": [
+    {
+      "id": "flat-white",
+      "name": "Flat White",
+      "description": "Doppelter Espresso, Hafermilch",
+      "price": 3.9,
+      "currency": "EUR",
+      "promo": "Hausröstung",
+      "allergens": ["G"],
+      "diet": ["vegetarisch", "vegan"],
+      "image": "flat-white.jpg"
+    },
+    {
+      "id": "filter",
+      "name": "Filterkaffee",
+      "description": "Single Origin, hand aufgebrüht",
+      "price": 3.4,
+      "currency": "EUR",
+      "allergens": [],
+      "diet": ["vegan"],
+      "image": "filter.jpg"
+    },
+    {
+      "id": "banana-bread",
+      "name": "Banana Bread",
+      "description": "Walnuss, Zimt, Ahornsirup",
+      "price": 3.2,
+      "currency": "EUR",
+      "allergens": ["A", "H"],
+      "diet": ["vegetarisch"],
+      "image": "banana-bread.jpg"
+    },
+    {
+      "id": "cold-brew",
+      "name": "Cold Brew",
+      "description": "18 h kalt extrahiert, Orangenzeste",
+      "price": 4.2,
+      "currency": "EUR",
+      "allergens": [],
+      "diet": ["vegan"],
+      "image": "cold-brew.jpg"
+    }
+  ],
+  "legal": {
+    "vatNote": "Preise inkl. MwSt.",
+    "allergenNote": "Allergene A–N auf der gedruckten Karte.",
+    "address": "Beispielstraße 1, 00000 Beispielstadt",
+    "website": "example.com"
+  }
+}

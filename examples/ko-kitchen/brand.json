@@ -1,0 +1,26 @@
+{
+  "name": "Ko Kitchen · Deli Neukölln",
+  "theme": "dark",
+  "logo": "logo.png",
+  "logoDarkOnLight": true,
+  "colors": {
+    "bg": "#282F23",
+    "surface": "#1D231A",
+    "accent": "#FF7D00",
+    "accentFill": "#FF7D00",
+    "price": "#FF7D00",
+    "text": "#FFFFFF",
+    "textMuted": "#B5BEA0",
+    "legal": "#B5BEA0"
+  },
+  "fonts": {
+    "family": "Montserrat",
+    "weights": [400, 500, 600, 700, 800]
+  },
+  "rules": {
+    "safeAreaPct": 0.05,
+    "minContrast": 4.5,
+    "minTextPx": 32,
+    "maxFlashingHz": 3
+  }
+}

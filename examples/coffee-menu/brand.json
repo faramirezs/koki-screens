@@ -1,0 +1,14 @@
+{
+  "name": "Beispiel Kaffeebar",
+  "theme": "dark",
+  "fonts": {
+    "family": "Montserrat",
+    "weights": [400, 500, 600, 700, 800]
+  },
+  "rules": {
+    "safeAreaPct": 0.05,
+    "minContrast": 4.5,
+    "minTextPx": 32,
+    "maxFlashingHz": 3
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "language": "de",
+  "title": "Mittag",
+  "subtitle": "Wochenkarte KW 40 · 28.09.–01.10.",
+  "badge": "Heute · Mittwoch",
+  "hours": "MO–FR 12:00–15:00",
+  "items": [
+    {
+      "id": "kartoffelpueree",
+      "name": "Kartoffelpüree",
+      "description": "Sonnenblumenprotein oder Hähnchen, Salat",
+      "price": 9.9,
+      "currency": "EUR",
+      "allergens": ["A", "C", "G"],
+      "diet": ["vegetarisch"],
+      "image": "curry.jpg",
+      "focalPoint": [0.5, 0.55]
+    },
+    {
+      "id": "ofensuesskartoffel",
+      "name": "Ofensüßkartoffel",
+      "description": "Chili sin carne, Pico de Gallo, Salat",
+      "price": 10.9,
+      "currency": "EUR",
+      "allergens": ["F", "J"],
+      "diet": ["vegan"],
+      "image": "bowl.jpg"
+    },
+    {
+      "id": "babaganoush-falafel",
+      "name": "Babaganoush & Falafel",
+      "description": "Ofengemüse, Couscous, Salat, Tahini",
+      "price": 11.5,
+      "currency": "EUR",
+      "allergens": ["A", "K"],
+      "diet": ["vegan"],
+      "image": "salad.jpg"
+    },
+    {
+      "id": "pasta",
+      "name": "Pasta",
+      "description": "Gemüse- oder Rinderbolognese, Béchamel",
+      "price": 10.5,
+      "currency": "EUR",
+      "allergens": ["A", "C", "G"],
+      "diet": ["vegetarisch"],
+      "image": "pasta.jpg"
+    }
+  ],
+  "promo": {
+    "kind": "membership",
+    "kicker": "Membership",
+    "headline": "6 oder 10 Gerichte",
+    "cta": "An der Theke anmelden",
+    "image": "membership.jpg",
+    "tiers": [
+      { "label": "6 Gerichte", "price": 47, "unit": "im Monat" },
+      { "label": "10 Gerichte", "price": 69, "unit": "im Monat", "highlight": true }
+    ]
+  },
+  "legal": {
+    "vatNote": "Preise inkl. MwSt.",
+    "allergenNote": "vollständige Liste auf der gedruckten Karte",
+    "address": "Harzer Str. 39 · 12059 Berlin",
+    "website": "kokitchen.berlin"
+  }
+}
