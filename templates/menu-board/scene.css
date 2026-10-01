@@ -1,0 +1,165 @@
+/* menu-board scene — landscape 1920x1080.
+ *
+ * Geometry is fixed and asserted, not responsive: a signage player renders exactly
+ * 1920x1080 and the frame-capture step measures the same numbers every run.
+ *   72 px side margin, 60 px top, 56 px bottom  (>= 5% of 1080 = 54 px safe area)
+ *   header 60..228, rule 248..258, main 292..916, legal 940..1024
+ */
+
+.stage {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+.scene { position: absolute; inset: 0; }
+
+/* ---------- header lockup ---------- */
+.board__head {
+  position: absolute;
+  left: 72px;
+  top: 60px;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+.board__logo { width: 104px; height: 104px; object-fit: contain; }
+.theme-dark .board__logo--invert { filter: brightness(0) invert(1); opacity: 0.94; }
+.board__wordmark { display: flex; flex-direction: column; gap: 6px; }
+.board__eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.board__title {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: var(--fw-black);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-hero);
+}
+.board__subtitle {
+  font-size: var(--fs-desc);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+}
+
+/* ---------- badge ---------- */
+.board__badge {
+  position: absolute;
+  right: 72px;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+.board__badge-pill {
+  padding: 14px 40px;
+  border-radius: var(--radius-chip);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-size: var(--fs-badge);
+  font-weight: var(--fw-black);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.board__badge-hours {
+  font-size: var(--fs-desc);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+}
+
+/* ---------- three-bar rule ---------- */
+.board__rule { position: absolute; left: 72px; top: 248px; display: flex; gap: 12px; }
+.board__rule span { display: block; height: 10px; border-radius: 6px; }
+.board__rule .b1 { width: 240px; background: var(--accent-fill); }
+.board__rule .b2 { width: 160px; background: var(--text-muted); }
+.board__rule .b3 { width: 96px; background: var(--text-muted); opacity: 0.55; }
+
+/* ---------- item rows ---------- */
+.menu {
+  position: absolute;
+  left: 72px;
+  top: 292px;
+  width: 1008px;
+  display: flex;
+  flex-direction: column;
+}
+.item {
+  height: 156px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  border-bottom: 1px solid var(--hairline);
+}
+.item:last-child { border-bottom: none; }
+.item__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.item__top { display: flex; align-items: center; gap: 18px; }
+.item__name {
+  margin: 0;
+  font-size: var(--fs-item);
+  font-weight: var(--fw-bold);
+  line-height: 1.1;
+  color: var(--text);
+}
+.item__ribbon {
+  padding: 6px 16px;
+  border-radius: var(--radius-chip);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-size: var(--fs-legal);
+  font-weight: var(--fw-black);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.item__desc {
+  margin: 0;
+  font-size: var(--fs-desc);
+  font-weight: var(--fw-regular);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.item__allergens {
+  margin: 0;
+  font-size: var(--fs-legal);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.item__key {
+  color: var(--accent);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.1em;
+  margin-right: 10px;
+}
+.item__price { flex: 0 0 auto; }
+
+/* ---------- hero ---------- */
+.hero-frame--board {
+  position: absolute;
+  left: 1128px;
+  top: 292px;
+  width: 720px;
+  height: 624px;
+}
+
+/* ---------- legal ---------- */
+.board__legal {
+  position: absolute;
+  left: 72px;
+  right: 72px;
+  bottom: 56px;
+}

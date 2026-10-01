@@ -1,0 +1,29 @@
+  <section class="scene" id="scene-promo">
+    <div class="promo">
+      <div class="promo__glow"></div>
+      <div class="promo__subject{{subjectClass}}">
+        <img src="{{subject.src}}" alt="" style="object-position: {{subject.focal}}">
+      </div>
+      <div class="promo__column">
+        <div class="promo-ribbon">
+          <div class="promo__kicker-row">
+            {{*kicker}}<span class="promo-ribbon__kicker">{{text}}</span>{{/kicker}}
+          </div>
+          <h2 class="promo-ribbon__headline">{{headline}}</h2>
+          <div class="promo-ribbon__tiers">
+            {{*tiers}}
+            <div class="price-lockup price-lockup--row{{highlightClass}}">
+              <span class="promo-ribbon__tier-label">{{label}}</span>
+              <span><span class="price-lockup__amount price-lockup__amount--xl">{{price}}</span><span class="price-lockup__unit">{{unit}}</span></span>
+            </div>
+            {{/tiers}}
+          </div>
+          {{*cta}}<div class="promo-ribbon__cta">{{text}}</div>{{/cta}}
+          {{*terms}}<div class="promo-ribbon__terms">{{text}}</div>{{/terms}}
+        </div>
+      </div>
+      <footer class="legal-strip promo__legal">
+        {{*legal.lines}}<p class="legal-strip__line">{{bodyHtml}}</p>{{/legal.lines}}
+      </footer>
+    </div>
+  </section>

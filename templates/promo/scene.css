@@ -1,0 +1,66 @@
+/* promo scene — full-frame 1920x1080 takeover.
+ *
+ * Left column carries the offer, right half carries the subject. The photo never sits
+ * under the price tiers: PAngV § 10(4) wants the price attached to the offer, and a
+ * photo behind moving text is how that association gets lost.
+ */
+
+.promo {
+  position: absolute;
+  inset: 0;
+  background: var(--surface);
+  overflow: hidden;
+}
+.promo__subject {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 960px;
+  height: 1080px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 72px;
+}
+.promo__subject img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 36px 54px rgba(0, 0, 0, 0.45));
+}
+.promo__subject--flat img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: none;
+}
+.promo__glow {
+  position: absolute;
+  right: -120px;
+  top: -120px;
+  width: 900px;
+  height: 900px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-fill) 0%, rgba(0, 0, 0, 0) 62%);
+  opacity: 0.16;
+}
+.promo__column {
+  position: absolute;
+  left: 96px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 820px;
+}
+.promo__legal {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  bottom: 56px;
+}
+.promo__kicker-row { display: flex; align-items: center; gap: 20px; margin-bottom: 26px; }
+.promo-ribbon__tier-label {
+  font-size: var(--fs-tier-label);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  white-space: nowrap;
+}

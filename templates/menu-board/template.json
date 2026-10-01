@@ -1,0 +1,45 @@
+{
+  "id": "menu-board",
+  "label": "Landscape menu board",
+  "description": "1920x1080 menu board: header lockup, three-bar rule, four item rows with price lockups and allergen codes, one hero photo panel, legal strip. Readable from frame 0 — the base scene is fully settled at t=0, so the loop seam is exact.",
+  "size": [
+    1920,
+    1080
+  ],
+  "role": "base",
+  "capacity": {
+    "items": 4,
+    "hardMax": 5
+  },
+  "fonts": {
+    "weights": [
+      400,
+      500,
+      700,
+      800
+    ]
+  },
+  "hero": {
+    "mode": "flat",
+    "note": "Menu-board hero uses the un-matted frame with object-fit cover + focal point. Cutouts are used by the promo template."
+  },
+  "beats": [
+    {
+      "selector": ".hero-frame__img",
+      "preset": "breath",
+      "at": 1.6,
+      "duration": 2.6,
+      "why": "micro-motion on the photo so the board is not a still image; returns to scale 1, so frame 0 == last frame"
+    },
+    {
+      "selector": ".board__badge",
+      "preset": "breath",
+      "at": 4.6,
+      "duration": 1.8,
+      "why": "a second, slower beat on the other side of the screen; also returns to its start state"
+    }
+  ],
+  "rules": {
+    "noInBeats": "The base scene must not use in/out presets: anything hidden at t=0 would break the seamless loop and would make the board unreadable for a customer who walks up mid-loop."
+  }
+}

@@ -1,0 +1,24 @@
+/* legal-strip — the mandatory declarations that must stay legible and unanimated.
+ *
+ * These lines are never animated, never reduced below --fs-legal and never placed
+ * over the photo: an allergen declaration that moves or loses contrast stops being a
+ * declaration. The strip is the last element in the DOM and the first in the safe-area
+ * check.
+ */
+.legal-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--legal);
+  font-size: var(--fs-legal);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-fine);
+}
+.legal-strip__line { margin: 0; }
+.legal-strip__key {
+  color: var(--accent);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  margin-right: 10px;
+}
+.legal-strip__sep { opacity: 0.6; margin: 0 12px; }
