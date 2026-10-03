@@ -5,11 +5,20 @@ A design-space search for 1920×1080 signage banners. It renders 960 animated ba
 back to the axis values so we can agree on *which combinations* work — not just which
 individual banner happens to be nice.
 
+The deck, the photo pool and the cutouts are committed, so a fresh clone is runnable as-is.
+
 ```
-node serve.mjs            # http://100.103.106.114:7788/  (Tailscale)
-open gallery.html         # vote: love / good / maybe / no
-node analyze.mjs --min 4 --min-pair 2   # report.md: per-axis and per-pair win rates
+npm install                                   # puppeteer-core + sharp, for the screenshot harnesses
+python3 -m pip install Pillow rembg           # only if you re-fetch or re-cut photos
+node serve.mjs                                # http://100.103.106.114:7788/  (Tailscale)
+open gallery.html                             # vote: love / good / maybe / no
+node analyze.mjs --min 4 --min-pair 2         # report.md: per-axis and per-pair win rates
 ```
+
+`package.json` carries the same steps as npm scripts (`npm run build`, `npm run audit`,
+`npm run motions`, …). The screenshot and audit harnesses drive an **already-installed**
+Chromium through `puppeteer-core`; they do not download one, so set `CHROME_PATH` if yours is
+not where `shots.mjs` expects it.
 
 ## The motion, in one paragraph
 
