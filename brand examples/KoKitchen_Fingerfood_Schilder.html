@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KoKitchen – Fingerfood Schilder</title>
+<style>
+  :root{
+    --green:#063f32;
+    --orange:#ff4a1f;
+    --line:#0b5a46;
+    --paper:#ffffff;
+  }
+
+  *{box-sizing:border-box}
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:#ececec;
+    color:var(--green);
+    font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;
+  }
+
+  .page{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:14mm 13mm 10mm 13mm;
+    display:flex;
+    flex-direction:column;
+    page-break-after:always;
+  }
+
+  .page:last-child{page-break-after:auto}
+
+  .brand{
+    text-align:center;
+    font-size:15mm;
+    line-height:1;
+    font-weight:900;
+    letter-spacing:-0.8mm;
+    margin:0 0 2mm 0;
+  }
+
+  .subtitle{
+    text-align:center;
+    font-size:6.5mm;
+    line-height:1.05;
+    font-weight:900;
+    letter-spacing:0.6mm;
+    margin:0 0 14mm 0;
+  }
+
+  .item{
+    padding:0 0 8mm 0;
+  }
+
+  .item + .item{
+    border-top:0.45mm solid var(--line);
+    padding-top:9mm;
+  }
+
+  .title{
+    margin:0 0 4mm 0;
+    font-size:10.5mm;
+    line-height:1.02;
+    font-weight:900;
+    letter-spacing:-0.35mm;
+    text-transform:uppercase;
+  }
+
+  .tag{
+    margin:0 0 3mm 0;
+    color:var(--orange);
+    font-size:7.2mm;
+    line-height:1;
+    font-weight:900;
+    text-transform:uppercase;
+  }
+
+  .allergens,
+  .note{
+    margin:0 0 2mm 0;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:5.3mm;
+    line-height:1.2;
+    font-weight:500;
+  }
+
+  .allergens b,
+  .note b{
+    color:var(--orange);
+    font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;
+    font-weight:900;
+  }
+
+  .footer{
+    margin-top:auto;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:3.6mm;
+    font-weight:500;
+    letter-spacing:0.05mm;
+  }
+
+  @media print{
+    @page{size:A4 portrait; margin:0}
+    html,body{background:#fff}
+    .page{
+      width:210mm;
+      height:297mm;
+      min-height:297mm;
+      margin:0;
+      box-shadow:none;
+      overflow:hidden;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- VEGAN -->
+<section class="page">
+  <div class="brand">KoKitchen</div>
+  <div class="subtitle">FINGERFOOD BUFFET</div>
+
+  <div class="item">
+    <h1 class="title">Canapé mit Babaganoush, Grillgemüse, getrockneten Tomaten &amp; Zatar</h1>
+    <div class="tag">Vegan</div>
+    <p class="allergens"><b>Allergene:</b> Weizen (Gluten), Sesam</p>
+  </div>
+
+  <div class="item">
+    <h1 class="title">Wrap mit Hummus, Ofengemüse, Sonnenblumenprotein, Tomate, eingelegten Zwiebeln &amp; Salat</h1>
+    <div class="tag">Vegan</div>
+    <p class="allergens"><b>Allergene:</b> Weizen (Gluten), Sesam</p>
+  </div>
+
+  <div class="item">
+    <h1 class="title">Mediterrane Pizza mit Grillgemüse</h1>
+    <div class="tag">Vegan</div>
+    <p class="note"><b>Hinweis:</b> enthält Kokos</p>
+    <p class="allergens"><b>Allergene:</b> Weizen (Gluten)</p>
+  </div>
+
+  <div class="footer">Ko Kitchen Team &nbsp;·&nbsp; kokitchen.berlin</div>
+</section>
+
+<!-- VEGETARISCH -->
+<section class="page">
+  <div class="brand">KoKitchen</div>
+  <div class="subtitle">FINGERFOOD BUFFET</div>
+
+  <div class="item">
+    <h1 class="title">Focaccia mit Tomate, Mozzarella &amp; Basilikumpesto</h1>
+    <div class="tag">Vegetarisch</div>
+    <p class="allergens"><b>Allergene:</b> Weizen (Gluten), Milch, Nüsse</p>
+  </div>
+
+  <div class="footer">Ko Kitchen Team &nbsp;·&nbsp; kokitchen.berlin</div>
+</section>
+
+<!-- FLEISCH -->
+<section class="page">
+  <div class="brand">KoKitchen</div>
+  <div class="subtitle">FINGERFOOD BUFFET</div>
+
+  <div class="item">
+    <h1 class="title">Canapé mit Roastbeef, Frischkäse, Meerrettich &amp; Kapern</h1>
+    <p class="allergens"><b>Allergene:</b> Weizen (Gluten), Milch</p>
+  </div>
+
+  <div class="item">
+    <h1 class="title">Wrap Caesar Style mit Huhn, Parmesan, Romana Salat &amp; Caesar Dressing</h1>
+    <div class="tag">Halal</div>
+    <p class="allergens"><b>Allergene:</b> Weizen (Gluten), Milch, Ei</p>
+  </div>
+
+  <div class="item">
+    <h1 class="title">Focaccia mit Mortadella &amp; Frischkäse</h1>
+    <p class="allergens"><b>Allergene:</b> Weizen (Gluten), Milch</p>
+  </div>
+
+  <div class="footer">Ko Kitchen Team &nbsp;·&nbsp; kokitchen.berlin</div>
+</section>
+
+<!-- FISCH -->
+<section class="page">
+  <div class="brand">KoKitchen</div>
+  <div class="subtitle">FINGERFOOD BUFFET</div>
+
+  <div class="item">
+    <h1 class="title">Canapé mit geräuchertem Lachs, Honigsenf-Dressing &amp; Dill</h1>
+    <p class="allergens"><b>Allergene:</b> Weizen (Gluten), Fisch, Senf</p>
+  </div>
+
+  <div class="footer">Ko Kitchen Team &nbsp;·&nbsp; kokitchen.berlin</div>
+</section>
+
+</body>
+</html>

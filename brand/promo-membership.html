@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>KoKitchen — Membership Promo (640×360)</title>
+<!-- Membership promo slot for the digital menu board. 640×360 = exactly 16:9.
+     Loop: 10 s, sound-off, first frame = last frame (all elements hidden).
+     Only opacity + transform animate (compositor-only).
+     Prices are the operator's: 47 € / 6 dishes per month, 69 € / 10 dishes per month.
+     Do not invent terms (minimum contract, cancellation, validity) — add them only when confirmed. -->
+<!-- Preview uses the GSAP CDN. Self-host gsap.min.js on the signage player (offline). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; width: 640px; height: 360px; overflow: hidden; }
+  body { font-family: var(--kk-font); background: var(--panel); color: var(--text); }
+  body.theme-dark  { --on-accent: var(--kk-ink); }
+
+  .slot {
+    width: 640px; height: 360px; padding: 26px 30px;
+    background: var(--panel);
+    display: flex; flex-direction: column;
+  }
+
+  /* every element starts hidden: frame 0 == last frame → seamless loop */
+  .chip, .head, .tier, .cta { opacity: 0; will-change: transform, opacity; }
+
+  .chip {
+    align-self: flex-start;
+    padding: 6px 16px; border-radius: var(--radius-chip);
+    background: var(--accent-fill); color: var(--on-accent);
+    font-size: 20px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  }
+
+  .head {
+    margin: 10px 0 0; color: var(--text-hero);
+    font-size: 46px; font-weight: 800; line-height: 1.03; letter-spacing: -.01em;
+  }
+
+  .tiers { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .tier {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+    padding: 10px 16px; border-radius: var(--radius-panel);
+    background: rgba(255, 255, 255, .05);
+    border-left: 6px solid var(--hairline-c);
+  }
+  body.theme-light .tier { background: rgba(29, 35, 26, .04); }
+  .tier--best { border-left-color: var(--accent-fill); }
+  .tier .meals { font-size: 34px; font-weight: 700; color: var(--text); }
+  .tier .price { font-size: 42px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .tier .per   { font-size: 20px; font-weight: 500; color: var(--text-2); margin-left: 6px; }
+
+  .cta {
+    margin-top: auto; padding-top: 12px;
+    font-size: 26px; font-weight: 600; color: var(--accent);
+    letter-spacing: .01em;
+  }
+</style>
+</head>
+<body class="theme-dark">
+<div class="slot">
+  <span class="chip">Membership</span>
+  <h1 class="head">6 oder 10 Gerichte</h1>
+  <div class="tiers">
+    <div class="tier">
+      <span class="meals">6 Gerichte</span>
+      <span><span class="price">47 €</span><span class="per">im Monat</span></span>
+    </div>
+    <div class="tier tier--best">
+      <span class="meals">10 Gerichte</span>
+      <span><span class="price">69 €</span><span class="per">im Monat</span></span>
+    </div>
+  </div>
+  <p class="cta">An der Theke anmelden</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script>
+(function () {
+  // theme comes from the host board: promo-membership.html?theme=light
+  var theme = new URLSearchParams(location.search).get('theme') === 'light' ? 'theme-light' : 'theme-dark';
+  document.body.classList.remove('theme-dark');
+  document.body.classList.add(theme);
+
+  if (!window.gsap) {                       // CDN unreachable → show the static frame
+    document.querySelectorAll('.chip, .head, .tier, .cta').forEach(function (el) { el.style.opacity = 1; });
+    window.__promo = { ok: false, reason: 'gsap-missing' };
+    return;
+  }
+
+  var tl = gsap.timeline({ repeat: -1, defaults: { ease: 'power2.out', duration: 0.5 } });
+
+  tl.fromTo('.chip', { opacity: 0, y: -18 }, { opacity: 1, y: 0 }, 0.15)
+    .fromTo('.head', { opacity: 0, y: 26 }, { opacity: 1, y: 0 }, 0.40)
+    .fromTo('.tier', { opacity: 0, y: 30 }, { opacity: 1, y: 0, stagger: 0.30 }, 0.90)
+    .fromTo('.cta',  { opacity: 0, y: 16 }, { opacity: 1, y: 0 }, 2.30)
+    // reading hold ≈ 4 s, then a breath on the tiers (compositor-only)
+    .to('.tiers', { scale: 1.025, duration: 1.1, ease: 'power1.inOut' }, 5.20)
+    .to('.tiers', { scale: 1, duration: 1.1, ease: 'power1.inOut' }, 6.30)
+    // back to the empty first frame → seamless loop
+    .to('.chip, .head, .tier, .cta', { opacity: 0, duration: 0.5, stagger: 0.05 }, 8.80);
+
+  window.__promo = { ok: true, tl: tl, loopSeconds: 10 };
+
+  // do not animate off-screen (players freeze tabs; keeps CPU/GPU honest)
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { tl.pause(); } else { tl.play(); }
+  });
+})();
+</script>
+</body>
+</html>

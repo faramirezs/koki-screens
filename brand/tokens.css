@@ -1,0 +1,91 @@
+/* KoKitchen DMB design tokens — see identity.md for the audit.
+   Grounds: olive #282F23 (dark) and white (light); #1D231A = deep surface.
+   Every ratio below was computed with the WCAG relative-luminance formula.
+   Self-host Montserrat on the signage player (players may be offline). */
+
+:root {
+  /* --- brand constants --- */
+  --kk-olive:       #282F23;  /* dark ground                 */
+  --kk-ink:         #1D231A;  /* near black, deep surface    */
+  --kk-green:       #5F6F52;  /* print green                 */
+  --kk-sage:        #B5BEA0;  /* print sage                  */
+  --kk-cream:       #FEFAE0;  /* logo cream                  */
+  --kk-orange:      #FF7D00;  /* orange — fills, bars, dots, dark-ground text */
+  --kk-orange-deep: #C2410C;  /* orange that stays orange and passes text contrast on light grounds (5.18 / 4.92 on cream) */
+
+  /* --- type --- */
+  --kk-font: 'Montserrat', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+  --fs-hero:     128px;  /* ≥10 m            */
+  --fs-title:     84px;  /* ≥6 m             */
+  --fs-promo:     56px;  /* ≥4 m             */
+  --fs-item:      48px;  /* ~2.7 m, counter  */
+  --fs-price:     48px;
+  --fs-tag:       40px;
+  --fs-subtitle:  36px;
+  --fs-allergen:  32px;  /* ≤1.5 m           */
+  --fs-eyebrow:   28px;
+  --fs-legend:    24px;  /* ≤1 m             */
+  --fs-footer:    22px;
+
+  --fw-light: 300; --fw-regular: 400; --fw-medium: 500;
+  --fw-semi: 600;  --fw-bold: 700;    --fw-black: 800;
+
+  --track-eyebrow: 0.32em;  /* menu-minimax .eyebrow */
+  --track-tag:     0.06em;
+  --track-label:   0.08em;
+  --track-footer:  0.16em;
+  --track-title:  -0.01em;
+
+  --lh-title: 1.0; --lh-item: 1.3; --lh-fine: 1.25;
+
+  /* --- geometry (1920×1080) --- */
+  --safe: 96px;          /* outer margin                 */
+  --safe-critical: 192px;/* inner 80 % for critical text */
+  --h-header: 180px;
+  --h-rule: 24px;
+  --h-footer: 110px;
+  --promo-w: 640px;      /* exactly 16:9 → 360 px high   */
+  --promo-h: 360px;
+  --gap: 64px;
+  --hairline: 1px;
+
+  --rule-bar: 8px;       /* rule bar thickness (menu-minimax 24/12 mm rule at 1080p) */
+  --rule-brand-w: 192px;
+  --rule-accent-w: 96px;
+  --dot: 20px;
+  --logo: 140px;
+
+  --radius-chip: 999px;
+  --radius-panel: 6px;
+}
+
+/* DARK theme — board default. Olive ground, near-black deep surface. */
+.theme-dark {
+  --ground:      var(--kk-olive);   /* #282F23 */
+  --panel:       var(--kk-ink);     /* #1D231A — white on it = 16.06 */
+  --text:        #FFFFFF;           /* 13.81 on ground */
+  --text-2:      var(--kk-sage);    /*  7.12 on ground (AAA) */
+  --text-hero:   var(--kk-cream);   /* 13.13 on ground */
+  --accent:      var(--kk-orange);  /*  5.38 on ground */
+  --accent-fill: var(--kk-orange);
+  --on-accent:   var(--kk-ink);     /*  6.26 on the orange chip */
+  --bar-brand:   var(--kk-cream);
+  --hairline-c:  rgba(255, 255, 255, .12);
+  --fade-c:      rgba(255, 255, 255, .10);
+}
+
+/* LIGHT theme — for daylight / window-facing screens. */
+.theme-light {
+  --ground:      #FFFFFF;
+  --panel:       var(--kk-cream);   /* #FEFAE0 — #282F23 on it = 13.13 */
+  --text:        var(--kk-ink);     /* 16.06 on white */
+  --text-2:      var(--kk-green);   /*  5.41 on white, 5.14 on cream */
+  --text-hero:   var(--kk-olive);   /* 13.81 on white */
+  --accent:      var(--kk-orange-deep); /* #C2410C — 5.18 on white, 4.92 on cream: legal at any size */
+  --accent-fill: var(--kk-orange);
+  --on-accent:   var(--kk-ink);     /*  6.26 on the orange chip */
+  --bar-brand:   var(--kk-olive);
+  --hairline-c:  rgba(29, 35, 26, .14);
+  --fade-c:      rgba(29, 35, 26, .10);
+}

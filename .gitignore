@@ -1,0 +1,11 @@
+# workspace-level
+.DS_Store
+*.log
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# node
+node_modules/
