@@ -1,0 +1,23 @@
+{
+  "id": "google-html5",
+  "label": "Google HTML5 / DOOH creative spec — DOCUMENTED STUB, OUT OF SCOPE IN v1",
+  "status": "stub",
+  "description": "Google's HTML5 creative requirements for Display & Video 360 / Campaign Manager (Google Ads HTML5 upload) are a different delivery format from this skill's MP4 output. Documented here so the shape is known; not implemented and deliberately out of scope for v1.",
+  "notImplemented": true,
+  "intended": {
+    "deliverable": "ZIP of HTML5 assets (index.html + assets), not MP4",
+    "constraints": [
+      "hard file-size cap on the ZIP (Google: 150 KB for HTML5 upload in most placements)",
+      "no external network requests; all assets inlined or bundled",
+      "click-through tag (ExitApi) required for clickable creatives",
+      "polite loading: initial load under ~2 s on a mid-range Android device",
+      "audio only after user interaction"
+    ],
+    "whyOutOfScope": "The size cap is incompatible with the current image strategy (full-resolution PNG cutouts + inlined fonts + inlined GSAP). A compliant build needs a separate asset pipeline: WebP/AVIF at placement size, subset fonts, and a minified GSAP subset. That is a different product surface from an in-store signage loop."
+  },
+  "blockers": [
+    "asset budget: inlined base64 fonts alone are ~100 KB before any image",
+    "requires a second encoder target (WebP/AVIF) and a size-budget checker",
+    "requires the ExitApi integration for clickable creatives"
+  ]
+}

@@ -1,0 +1,42 @@
+/* hero-frame — the photo panel.
+ *
+ * The photo is the only element allowed to bleed to the screen edge. It never carries
+ * text that is not also present elsewhere, because a photo can be replaced by the
+ * operator without a designer noticing the copy was inside it.
+ * `object-position` is driven by the focal point the image pipeline reports.
+ */
+.hero-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.hero-frame--bleed { border-radius: 0; }
+.hero-frame__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hero-frame__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--surface) 0%, rgba(0, 0, 0, 0) 55%);
+  pointer-events: none;
+}
+.hero-frame__scrim--bottom {
+  background: linear-gradient(0deg, var(--surface) 0%, rgba(0, 0, 0, 0) 45%);
+}
+.hero-frame__ribbon {
+  position: absolute;
+  left: 32px;
+  bottom: 32px;
+  padding: 10px 22px;
+  border-radius: var(--radius-chip);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-size: var(--fs-kicker);
+  font-weight: var(--fw-black);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

@@ -1,0 +1,68 @@
+{
+  "id": "promo",
+  "label": "Full-frame promo loop",
+  "description": "1920x1080 promo takeover: subject cutout over the surface colour, kicker chip, headline, one to three price tiers, CTA and the terms line. Renders as an overlay inside the menu-board loop, or on its own as a promo-only video.",
+  "size": [
+    1920,
+    1080
+  ],
+  "role": "overlay",
+  "capacity": {
+    "tiers": 3
+  },
+  "fonts": {
+    "weights": [
+      400,
+      500,
+      700,
+      800
+    ]
+  },
+  "hero": {
+    "mode": "cutout",
+    "note": "Uses the matted PNG from the image pipeline, scaled to fit and drop-shadowed. Falls back to the flat frame when matting was unavailable."
+  },
+  "beats": [
+    {
+      "selector": ".promo-ribbon__kicker",
+      "preset": "dropIn",
+      "offset": 0.7,
+      "duration": 0.45
+    },
+    {
+      "selector": ".promo-ribbon__headline",
+      "preset": "riseIn",
+      "offset": 1.0,
+      "duration": 0.55
+    },
+    {
+      "selector": ".promo-ribbon__tiers .price-lockup",
+      "preset": "riseIn",
+      "offset": 1.55,
+      "duration": 0.5,
+      "stagger": 0.28
+    },
+    {
+      "selector": ".promo-ribbon__cta",
+      "preset": "fadeIn",
+      "offset": 2.6,
+      "duration": 0.45
+    },
+    {
+      "selector": ".promo-ribbon__tiers",
+      "preset": "breath",
+      "offset": 3.3,
+      "duration": 1.6
+    },
+    {
+      "selector": ".promo__subject img",
+      "preset": "popIn",
+      "offset": 0.55,
+      "duration": 0.7
+    }
+  ],
+  "notes": [
+    "Offsets are relative to the moment the overlay fades in; the compiler turns them into absolute times.",
+    "The overlay always fades back to opacity 0 before the loop restarts, so the last frame equals frame 0."
+  ]
+}

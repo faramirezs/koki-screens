@@ -1,0 +1,31 @@
+/* price-lockup — name and price in one visual block.
+ *
+ * PAngV § 10(4) names screens explicitly and requires the total price to be directly
+ * associated with the offer. The lockup is therefore a single flex row that is never
+ * split across a scene change or animated independently of its item name.
+ * Prices are always the final consumer price incl. VAT, formatted by the compiler
+ * (`formatPrice`), never by CSS or by the template.
+ */
+.price-lockup {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+.price-lockup__amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-black);
+  color: var(--price);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.price-lockup__amount--xl { font-size: var(--fs-tier-price); line-height: 1; }
+.price-lockup__amount--lg { font-size: var(--fs-price); line-height: 1; }
+.price-lockup__unit {
+  font-size: var(--fs-desc);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  margin-left: 12px;
+}
+.price-lockup--row { padding: 18px 24px; border-radius: var(--radius-md); background: var(--row-fill); }
+.price-lockup--row.is-highlight { border-left: 8px solid var(--accent-fill); }

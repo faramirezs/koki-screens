@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kokitchen.berlin/screen-ad-generator/brand.schema.json",
+  "title": "Screen ad brand model",
+  "description": "Optional. Anything not declared here is derived: missing colours fall back to photo palette extraction, then to the built-in default theme.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "logo": {
+      "type": "string",
+      "description": "Path to a PNG/SVG logo. Relative paths resolve against the brand.json folder first, then --photos."
+    },
+    "logoDarkOnLight": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the logo artwork is dark and must be inverted on a dark theme."
+    },
+    "theme": {
+      "enum": ["dark", "light"],
+      "default": "dark",
+      "description": "Dark is the signage default; light is for daylight/window-facing screens. Never mix both on one wall."
+    },
+    "colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "All values are #RRGGBB. Every pair that ends up on screen is contrast-checked; a failing pair fails the build.",
+      "properties": {
+        "bg": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Screen ground." },
+        "surface": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Panel behind text." },
+        "accent": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Eyebrow/rules/CTA text." },
+        "accentFill": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Solid accent fill (chips, badge)." },
+        "price": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Price colour." },
+        "text": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "textMuted": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "legal": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "family": { "type": "string", "default": "Montserrat" },
+        "weights": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 100, "maximum": 900 },
+          "default": [400, 500, 600, 700, 800]
+        },
+        "cssFile": { "type": "string", "description": "Vendored @font-face CSS. Defaults to vendor/fonts.css inside the skill." }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "safeAreaPct": { "type": "number", "minimum": 0, "maximum": 0.2, "default": 0.05, "description": "Text-safe margin as a fraction of the short edge. 5% is the v1 default." },
+        "minContrast": { "type": "number", "minimum": 1, "maximum": 21, "default": 4.5, "description": "WCAG contrast floor for any text. 7 is preferred for body copy." },
+        "minTextPx": { "type": "integer", "minimum": 16, "default": 32, "description": "Hard floor for any rendered text at 1920x1080." },
+        "maxFlashingHz": { "type": "number", "default": 3, "description": "Photosensitivity limit. The validator rejects any timeline that flashes faster." }
+      }
+    }
+  }
+}

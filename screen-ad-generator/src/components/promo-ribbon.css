@@ -1,0 +1,33 @@
+/* promo-ribbon — kicker chip, headline, tier rows and CTA of a promo scene. */
+.promo-ribbon { display: flex; flex-direction: column; gap: 28px; }
+.promo-ribbon__kicker {
+  align-self: flex-start;
+  padding: 12px 28px;
+  border-radius: var(--radius-chip);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-size: var(--fs-kicker);
+  font-weight: var(--fw-black);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.promo-ribbon__headline {
+  margin: 0;
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-black);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.015em;
+  color: var(--text-hero);
+}
+.promo-ribbon__tiers { display: flex; flex-direction: column; gap: 18px; }
+.promo-ribbon__cta {
+  font-size: var(--fs-cta);
+  font-weight: var(--fw-semibold);
+  color: var(--accent);
+}
+.promo-ribbon__terms {
+  font-size: var(--fs-terms);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  max-width: 760px;
+}

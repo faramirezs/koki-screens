@@ -1,0 +1,36 @@
+{
+  "language": "en",
+  "title": "Test",
+  "hours": "MO–FR 12:00–15:00",
+  "items": [
+    {
+      "id": "dish-a",
+      "name": "Test dish A",
+      "description": "Zutaten A",
+      "price": 9.9,
+      "currency": "EUR",
+      "allergens": [
+        "A",
+        "C"
+      ],
+      "diet": [
+        "vegetarisch"
+      ],
+      "image": "dish-plate.jpg"
+    },
+    {
+      "id": "dish-b",
+      "name": "Testgericht B",
+      "price": 12.5,
+      "currency": "EUR",
+      "allergens": [],
+      "image": "drink-glass.jpg"
+    }
+  ],
+  "legal": {
+    "vatNote": "prices incl. VAT",
+    "allergenNote": "full list on the printed menu",
+    "address": "Teststr. 1",
+    "website": "example.org"
+  }
+}
