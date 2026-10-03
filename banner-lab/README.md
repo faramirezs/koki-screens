@@ -66,19 +66,25 @@ The workflow is the order above: find a settled Composition, then a background t
 then choreography that reads, then validate the whole Scene. The gallery opens on `composition` and
 the mode bar shows what each Mode varies and how many Banners it has.
 
-One renderer serves all four. A Mode decides two things — whether a Timeline is built, and whether
-the background sheets run:
+One renderer serves all four. A Mode decides which of two Timelines to build, and whether the
+background sheets run:
 
-| Mode | Timeline | background sheets | foreground |
-|---|---|---|---|
-| `composition` | none | held | still |
-| `background` | none | running | still |
-| `motion` | built | running | moving |
-| `scene` | built | running | moving |
+| Mode | energy | cast | background sheets | foreground |
+|---|---|---|---|---|
+| `composition` | no | no | held at t=0 | still |
+| `background` | **yes** | no | running | still |
+| `motion` | yes | yes | running | moving |
+| `scene` | yes | yes | running | moving |
+
+The two Timelines are the background's **energy** and the cast's **choreography**, and they are
+independent because Background mode is the reason: `bgEnergy` is a curve on `--energy` driven by the
+energy Timeline, so while both lived in one builder, Background mode — which builds no cast —
+rendered all four energy values identically and measured nothing. See `docs/adr/0003`.
 
 Composition mode needs no special code to be a still: every Element already sits at its settled pose
 in CSS, and the Timeline is only what moves it away from that pose. Not building one *is* the
-settled Composition. See `docs/adr/0003`.
+settled Composition. Its sheets are seeked to 0 as well as paused, so every Composition shows the
+same background pose rather than whatever point of the slide the wall clock had reached at mount.
 
 A Mode that pins most of its axes has a space small enough to cover completely, so it is covered
 completely: `background` has 10 × 4 = 40 Banners and `motion` has 18 × 5 = 90. The two big Modes are
@@ -102,6 +108,19 @@ equally often; the two small Modes are covered completely.
 not a tidiness point: `gallery.js` used to keep its own hand-written copy of the list, and when
 two axes were added that copy silently dropped them from every card and every Vote, and nothing
 failed. `gtest.mjs` now asserts the shape of a Vote, so the next one fails loudly.
+
+`product` is drawn per Banner rather than dealt up front, because which treatments a Banner may
+have depends on the layout drawn for it: a floating cutout or an arch needs its own box, and on a
+full-canvas photo both read as a hole in the banner. Drawing from the treatments the layout allows
+keeps every Banner a genuine sample. The alternative — sampling freely and rewriting the
+incompatible ones afterwards — dumps every rejection onto a single treatment, which is how
+`bottomCrop` reached 189 of 960 composition Banners against `arch`'s 103 and made the axis
+unreadable, since a third of `bottomCrop`'s Votes were really Votes about `fullBleed`.
+
+**How many Votes.** Composition mode is 960 Banners over 7 axes and the ranking is by Wilson lower
+bound, so a value needs enough observations for its interval to be narrower than the effect. 40
+Votes is roughly 4 per layout and 2.5 per palette: a first signal, not a ranking. Aim for 80–120
+before reading the table, then narrow the space rather than trying to vote through all 960.
 
 - **Palettes** are 16 hand-tuned sets built only from the KoKitchen tokens in
   `../brand/tokens.css`: `{mode, slide[3], panel, ink, accent, accent2, muted, onAccent}`.

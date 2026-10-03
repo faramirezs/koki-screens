@@ -5,8 +5,9 @@ like and the wrong one for finding out *why* you like it: a preference expressed
 cannot be attributed to any single axis, because every axis is different in every pair of Banners.
 
 So the deck is now split into four **Modes**. A Mode is the question a deck asks, expressed as the
-axes it is allowed to vary. Everything it does not vary is pinned to the **Reference Scene**, so two
-Banners in one deck differ in the axis under study and in nothing else:
+axes it is allowed to vary. Everything it does not vary is pinned to the **Reference Scene**, so
+Banners within a Mode vary only the axes belonging to the subsystem under study, and every axis
+outside that subsystem stays fixed:
 
 | Mode | varies | holds |
 |---|---|---|
@@ -15,8 +16,18 @@ Banners in one deck differ in the axis under study and in nothing else:
 | motion | motion, role motion | the other eleven |
 | scene | everything | nothing |
 
+This is not a one-variable A/B test and does not claim to be. Composition mode varies **seven** axes
+at once — it is the design problem cut into subsystems, each judged with the others held still, not
+seven separate experiments. What makes a Mode readable is that nothing *outside* its subsystem
+moves, so a preference expressed in it is about that subsystem and not about the other six.
+
 **There is still one renderer.** A Mode does not select a different code path through `lab.js`; it
-decides two booleans — whether a Timeline is built, and whether the background sheets run.
+decides which of two Timelines to build, and whether the background sheets run. The two Timelines
+are the background's energy and the cast's choreography, and they are independent: Background mode
+builds the first and not the second, Motion and Scene build both, Composition builds neither. This
+split is load-bearing rather than tidy. `bgEnergy` is a curve on `--energy` driven by the energy
+Timeline, so while both lived in one builder, Background mode — which builds no cast — rendered all
+four energy values identically and measured nothing.
 
 **"Show the settled Composition" is not a feature, it is the absence of one.** Every Element already
 sits at its settled pose in CSS. The Timeline is only ever what moves it *away* from that pose. So

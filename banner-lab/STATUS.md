@@ -31,25 +31,39 @@ node gtest.mjs   ->  all gallery checks passed
 
 The scene deck varies thirteen axes at once, which finds a Banner you like but cannot tell you
 *why*. A **Mode** is the question a deck asks, expressed as the axes it varies; everything else is
-pinned to the **Reference Scene**, so two Banners in one deck differ in the axis under study and
-nothing else. One renderer serves all four — a Mode decides only whether a Timeline is built and
-whether the background sheets run. See `docs/adr/0003`.
+pinned to the **Reference Scene**, so Banners within a Mode vary only the axes of the subsystem
+under study and nothing outside it moves. This is not a one-variable A/B test — Composition varies
+seven axes at once — it is the design problem cut into subsystems. One renderer serves all four: a
+Mode decides which of two Timelines to build, and whether the sheets run. See `docs/adr/0003`.
 
-| Mode | Timeline | sheets | foreground | varies |
-|---|---|---|---|---|
-| `composition` | none | held | still | 7 axes |
-| `background` | none | running | still | 2 axes |
-| `motion` | built | running | moving | 2 axes |
-| `scene` | built | running | moving | 13 axes |
+The two Timelines are the background's **energy** (`bgEnergy` is a curve on `--energy`) and the
+cast's **choreography**. They are independent, and Background mode is the reason: it builds the
+energy and no cast, so while both lived in one builder all four `bgEnergy` values rendered
+identically and the Mode measured nothing.
+
+| Mode | energy | cast | sheets | foreground | varies |
+|---|---|---|---|---|---|
+| `composition` | no | no | held @ t=0 | still | 7 axes |
+| `background` | **yes** | no | running | still | 2 axes |
+| `motion` | yes | yes | running | moving | 2 axes |
+| `scene` | yes | yes | running | moving | 13 axes |
 
 Composition mode is a still for free: every Element already sits at its settled pose in CSS and the
-Timeline is only what moves it away, so not building one *is* the settled Composition.
+Timeline is only what moves it away, so not building one *is* the settled Composition. The sheets
+are seeked to 0 as well as paused, so every Composition shows the same background pose rather than
+whatever point of the slide the wall clock had reached at mount.
 
 **Votes are never pooled across Modes.** They answer different questions. `report.md` has one
 section per Mode.
 
 **The Reference Scene is a placeholder** — declared in `space.mjs`, not derived, because no Votes
 exist yet. Re-point it at the winner of Composition mode once that Mode has Votes.
+
+**How many Votes.** Composition mode is 960 Banners over 7 axes, and the ranking is by Wilson lower
+bound, so a value needs enough observations for the interval to be narrower than the effect.
+40 Votes is about 4 per layout and 2.5 per palette — enough for a first signal, not for a ranking.
+Aim for 80–120 before reading the table, then narrow the space instead of trying to vote through
+all 960. The `--min` and `--min-pair` flags on `analyze.mjs` set the floors.
 
 ## The loop
 
@@ -223,12 +237,24 @@ file after running it.
 - `polaroid` and `tiltedCard` rotate the media. Any layout that also needs to offset the media
   must use the standalone `translate` property, not `transform` — same specificity, and the
   later rule silently wins.
-- **The background's slide phase is not seekable.** `--energy` is driven by the timeline, so a
-  frozen frame has the right *energy* for its Phase, but each sheet's `translateX` is still a
-  CSS animation on the wall clock. A contact sheet therefore shows each card mid-slide at an
-  arbitrary position. That is cosmetically harmless — every frame of a looping background is a
-  valid frame — but it means two screenshots of the same banner are not pixel-comparable
-  unless the slide animations are paused and seeked too, which `shots.mjs` does not do.
+- **The background's slide phase is not seekable.** `--energy` is driven by the Timeline, so a
+  frozen frame has the right *energy* for its Phase, but each sheet's `translateX` is still a CSS
+  animation on the wall clock. In the animated Modes a contact sheet therefore shows each card
+  mid-slide at an arbitrary position — cosmetically harmless, since every frame of a looping
+  background is a valid frame, but it means two screenshots of the same Banner are not
+  pixel-comparable unless the slides are paused and seeked, which `shots.mjs` does not do.
+  Composition mode does not have this problem: `freezeBackground()` pauses *and* seeks to 0, so
+  every Composition shows the same background pose.
+- **`arch` and `cutoutFloat` are structurally rarer than the other product treatments.** They
+  cannot sit on the two full-canvas layouts, so they appear in 8 of 10 layouts (111 of 960
+  composition Banners) while the rest appear in 10 (144–150). This is a property of the design,
+  not of the sampler, and it is not fixable without allowing a product to read as a hole in the
+  banner. It matters only for narrow comparisons: `arch` vs `bottomCrop` is 111 vs 150
+  observations, so `--min` needs to be below 111 for both to appear at all.
+- **Background mode judges `bgEnergy` at one instant, not over time.** The energy curve is the
+  thing under study, and the gallery shows one Banner at a time — a viewer can see that a Banner
+  is calmer or busier, but not that its curve peaks during Intro. `motions.html` is where the
+  curve over time is visible.
 - **Screenshots on this box are not reproducible at all.** Two captures of a completely static
   page — one `linear-gradient` div, no animation anywhere — differ across **98.7%** of their
   pixels (mean 22/255) on this software rasterizer. Frame-to-frame pixel diffs therefore cannot
@@ -301,3 +327,28 @@ file after running it.
     now `mode | axis vector`: without the Mode, a Composition Banner whose seven varied axes all
     land on the Reference Scene has the *identical* vector to the Motion Banner for
     `slamLeft × hierarchy`, and one would have silently suppressed the other.
+
+## Bugs fixed in the review round (do not regress)
+
+16. **Background mode varied `bgEnergy` and then ignored it.** `BG_ENERGY_CURVES` was applied
+    inside `buildMotion()`, and Background mode built no Timeline, so `--energy` stayed at its
+    initial value for every curve. All four `bgEnergy` values rendered identically: the "40
+    exhaustive backgrounds" were 10 treatments repeated four times. The tests missed it because
+    `motions.mjs` calls `buildMotion()` directly, where the curve does work, and `gtest.mjs` only
+    checked that the sheets were running, not what they were running *at*. The fix is
+    architectural rather than local: `buildMotion` is now two functions, `addEnergy` and
+    `addChoreography`, and a Mode picks which to build. `gtest.mjs` now reads `--energy` off four
+    Background Banners and fails if they agree.
+17. **Composition froze the sheets wherever the wall clock was, not at the start.** `pause()` holds
+    a CSS animation at its current time, and the current time is however long the element had been
+    mounted. In a contact sheet of twelve cards that is twelve different points of the slide, so the
+    background of a "controlled still" was itself an uncontrolled variable. `freezeBackground()`
+    now seeks to 0 as well as pausing.
+18. **The sampler rewrote incompatible layout × product pairs, and dumped every rewrite on one
+    product.** A floating cutout or an arch needs its own box, so on a full-canvas layout the
+    sampler replaced the product with `bottomCrop`. That gave `bottomCrop` 189 of the 960
+    composition Banners against `arch`'s 103, and it made the axis unreadable — a third of
+    `bottomCrop`'s Votes were really Votes about `fullBleed`. The product is now drawn from the
+    treatments the banner's own layout allows, so nothing is rewritten. Max/min across the axis
+    fell from 1.83 to 1.35, and the residual is structural: `arch` and `cutoutFloat` cannot sit on
+    the two full-canvas layouts, so they appear in 8 of 10 rather than 10 of 10.

@@ -73,6 +73,9 @@ async function enterMode(mode) {
       active: document.querySelector(".mode.on")?.dataset.mode,
       filters: document.querySelectorAll("#filters select").length,
       paused: slides.length > 0 && slides.every((s) => s.getAnimations().every((a) => a.playState === "paused")),
+      // Where a held sheet is held. `pause()` alone freezes wherever the wall clock happened to be
+      // at mount time, which is a different point for every card.
+      frozenAt: slides.length ? Math.max(...slides.flatMap((s) => s.getAnimations().map((a) => Math.round(a.currentTime ?? -1)))) : -1,
       copy: copy.map((el) => getComputedStyle(el).transform).join(" "),
     };
   });
@@ -83,6 +86,7 @@ const comp = await enterMode("composition");
 check(comp.active === "composition", "composition mode is active and marked");
 check(comp.filters === variesIn("composition").size, `composition offers only its own axes (${comp.filters} filters)`);
 check(comp.paused, "composition holds the background sheets still");
+check(comp.frozenAt === 0, `composition freezes the sheets at the start of their cycle (t=${comp.frozenAt}ms)`);
 await assertStill("composition");
 
 // background is not a still: the sheets run, and the copy still does not move
@@ -90,6 +94,27 @@ const bg = await enterMode("background");
 check(bg.active === "background", "background mode is active and marked");
 check(!bg.paused, "background lets the sheets run");
 await assertStill("background");
+
+/**
+ * Background Mode varies `bgEnergy`, and `bgEnergy` is a curve on `--energy` driven by the
+ * Timeline. Background Mode builds no cast Timeline, so while the energy curve lived inside that
+ * Timeline all four values rendered identically and the Mode measured nothing at all: 40 Banners
+ * were 10 backgrounds repeated four times. This is the check that was missing.
+ */
+const bgIds = {};
+for (const b of JSON.parse(readFileSync("banners.json", "utf8"))) {
+  if (b.mode === "background" && !bgIds[b.bgEnergy]) bgIds[b.bgEnergy] = b.id;
+}
+const energies = {};
+for (const [curve, id] of Object.entries(bgIds)) {
+  const p = await inst.newPage();
+  await p.goto(`http://127.0.0.1:7788/one.html?id=${id}`, { waitUntil: "networkidle0" });
+  await new Promise((r) => setTimeout(r, 500));
+  energies[curve] = await p.evaluate(() => getComputedStyle(document.querySelector(".bn__bg")).getPropertyValue("--energy").trim());
+  await p.close();
+}
+check(new Set(Object.values(energies)).size > 1, `background mode shows the bgEnergy curve, not one value four times (${JSON.stringify(energies)})`);
+check(energies.flat === "1", `the curveless energy keeps full travel (flat=${energies.flat})`);
 
 // motion moves the copy, and only its own two axes are on offer
 const mo = await enterMode("motion");

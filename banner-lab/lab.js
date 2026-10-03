@@ -254,23 +254,30 @@ function offPose(node, root, dir, margin = 90) {
   return { x: 0, y: 0 };
 }
 
-export function buildMotion(root, spec) {
-  const m = MOTION_SPEC[spec.motion] || MOTION_SPEC.slamLeft;
-  const tl = gsap.timeline({ repeat: -1, paused: true });
-
-  // ---- the background's energy: how far the sheets travel during each Phase ----
-  // Driven from THIS timeline rather than from CSS, so that seeking to a Phase shows the
-  // energy that Phase actually has. `flat` has no curve and keeps full travel throughout.
+/**
+ * The background's energy: how far the sheets travel during each Phase.
+ *
+ * Driven from the Timeline rather than from CSS, so that seeking to a Phase shows the energy that
+ * Phase actually has. `flat` has no curve and keeps full travel throughout.
+ *
+ * Its own function because it is its own Timeline. Background Mode must build this - `bgEnergy` is
+ * the only thing that Mode varies, so without it all four values render identically - while
+ * Composition Mode must build neither.
+ */
+function addEnergy(tl, root, spec) {
   const bgEl = root.querySelector(".bn__bg");
   const curve = BG_ENERGY_CURVES[spec.bgEnergy];
-  if (bgEl && curve) {
-    let prev = 0;
-    for (const [t, v] of curve) {
-      tl.to(bgEl, { "--energy": v, duration: Math.max(0.001, t - prev), ease: "none" }, prev);
-      prev = t;
-    }
+  if (!bgEl || !curve) return;
+  let prev = 0;
+  for (const [t, v] of curve) {
+    tl.to(bgEl, { "--energy": v, duration: Math.max(0.001, t - prev), ease: "none" }, prev);
+    prev = t;
   }
+}
 
+/** The panel and the cast: Enter, Idle and Exit, in reading order. */
+function addChoreography(tl, root, spec) {
+  const m = MOTION_SPEC[spec.motion] || MOTION_SPEC.slamLeft;
   const panel = root.querySelector(".bn__copy");
   // One Motion family, shared by the whole cast, so the board reads as a single gesture.
   // `roleMotion` decides how much of that family each Role takes - ROLE_MOTION in space.mjs.
@@ -351,7 +358,13 @@ export function buildMotion(root, spec) {
   // would end when the last exit tween ends (~10.4s) and every caller that seeks to LOOP
   // would silently wrap back to frame zero.
   tl.to({ pad: 0 }, { pad: 1, duration: 0.01, ease: "none" }, LOOP - 0.01);
+}
 
+/** The whole Scene, both timelines. What `motions.html` and the loop-seam test measure. */
+export function buildMotion(root, spec) {
+  const tl = gsap.timeline({ repeat: -1, paused: true });
+  addEnergy(tl, root, spec);
+  addChoreography(tl, root, spec);
   tl.pause(0);
   return tl;
 }
@@ -543,31 +556,42 @@ export function settle(bn) {
 }
 
 /**
- * Stop the background sheets where they are.
+ * Stop the background sheets at the start of their cycle.
  *
- * The sheets are driven by CSS, not by the Timeline, so leaving the Timeline unbuilt is not
- * enough to hold them still. A settled Composition is a still, so nothing in the frame may move.
+ * The sheets are driven by CSS, not by the Timeline, so leaving the Timeline unbuilt is not enough
+ * to hold them still. A settled Composition is a still, so nothing in the frame may move - and
+ * "still" means every Banner shows the SAME pose, not merely a pose that has stopped. `pause()`
+ * alone freezes each sheet wherever the wall clock happened to be when it mounted, so twelve cards
+ * in one contact sheet freeze at twelve different points of the slide. Seeking to 0 first is what
+ * makes the background of a Composition a controlled variable.
  */
 export function freezeBackground(root) {
   for (const slide of root.querySelectorAll(".bn__slide")) {
-    for (const a of slide.getAnimations()) a.pause();
+    for (const a of slide.getAnimations()) {
+      a.pause();
+      a.currentTime = 0;
+    }
   }
 }
 
 /**
  * Put a Banner into the state its Mode asks for, and return its Timeline when it has one.
  *
- * `composition` and `background` have no Timeline at all. Every Element already sits at its
- * settled pose in CSS - the Timeline is only ever what moves it away from that pose - so
- * "show the settled Composition" is not a special case to build, it is the absence of one.
+ * A Scene has two independent timelines, and the Mode decides which to build. Composition builds
+ * neither - every Element already sits at its settled pose in CSS, because the Timeline is only
+ * ever what moves it away from that pose, so "show the settled Composition" is not a special case
+ * to build, it is the absence of one. Background builds only the energy, because that is the only
+ * thing it varies. Motion and Scene build both.
  */
 export function animate(root, spec) {
   const mode = MODES[spec.mode] || MODES.scene;
-  if (!mode.animated) {
-    if (mode.background === "frozen") freezeBackground(root);
-    return null;
-  }
-  return buildMotion(root, spec);
+  if (mode.background === "frozen") freezeBackground(root);
+  const tl = gsap.timeline({ repeat: -1, paused: true });
+  if (mode.energy) addEnergy(tl, root, spec);
+  if (mode.choreography) addChoreography(tl, root, spec);
+  if (!tl.getChildren().length) return null; // nothing to drive: `flat` background, no cast
+  tl.pause(0);
+  return tl;
 }
 
 export function measure(bn) {

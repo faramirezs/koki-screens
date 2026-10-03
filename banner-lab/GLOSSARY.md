@@ -73,6 +73,14 @@ _Avoid_: per-element animation, hierarchy
 suits Intro and Tail; low energy stops the background competing with the copy during Hold.
 _Avoid_: background speed, intensity
 
+**Energy timeline**: the Timeline that drives Background energy. It is separate from the
+Choreography timeline because Background mode varies `bgEnergy` and nothing else — a Mode that
+builds no Choreography must still build this, or all four energy values render identically.
+_Avoid_: background animation
+
+**Choreography timeline**: the Timeline that drives the panel and the cast: Enter, Idle, Exit.
+_Avoid_: motion timeline, element timeline
+
 ## Judging
 
 **Vote**: one judgement of a Banner — love, good, maybe or no — stored together with the

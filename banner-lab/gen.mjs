@@ -80,7 +80,27 @@ export function generate({ count, seed = 1, mode = "scene", photos = [], withCut
   // varies 2 of 13, which is 40 combinations in total. Covering it completely is the difference
   // between "we looked at some backgrounds" and "we looked at the backgrounds", so when the whole
   // space fits inside the requested count, emit the whole space rather than a sample of it.
-  const exhaustive = space <= count;
+  const exhaustive = space <= count && !varies.has("product");
+
+  // Product treatments are not all compatible with every layout: a floating cutout or an arch
+  // needs its own box, and on a full-canvas photo both read as a hole in the banner. Drawing each
+  // banner's product from the treatments its layout allows keeps every banner a genuine sample of
+  // the space. The alternative - sampling freely and rewriting the incompatible ones afterwards -
+  // dumps every rejection onto one treatment, which is how `bottomCrop` reached 189 of the 960
+  // composition banners while `arch` got 103, and it makes the axis unreadable, because a third of
+  // bottomCrop's votes were really votes about `fullBleed`.
+  const allowedProducts = (layout) =>
+    FULL_CANVAS_LAYOUTS.has(layout) ? PRODUCTS.filter((p) => !NEEDS_CUTOUT.has(p)) : PRODUCTS;
+  const productPools = new Map();
+  const nextProduct = (layout) => {
+    let pool = productPools.get(layout);
+    if (!pool || pool.i >= pool.order.length) {
+      const ok = allowedProducts(layout);
+      pool = { order: deck(rng, ok, ok.length), i: 0 };
+      productPools.set(layout, pool);
+    }
+    return pool.order[pool.i++];
+  };
   const total = exhaustive ? space : count;
   const axes = {};
   if (exhaustive) {
@@ -99,6 +119,9 @@ export function generate({ count, seed = 1, mode = "scene", photos = [], withCut
     }
   } else {
     for (const [axis, values] of Object.entries(domains)) {
+      // `product` is drawn per banner, not here: which treatments are available depends on the
+      // layout drawn for that banner.
+      if (axis === "product" && varies.has("product")) continue;
       // A pinned axis draws nothing from the rng, so each Mode's deck is reproducible on its own
       // and is not perturbed by the size of the axes it is holding still.
       axes[specKey(axis)] = varies.has(axis) ? deck(rng, values, total) : Array(total).fill(REFERENCE[axis]);
@@ -114,11 +137,8 @@ export function generate({ count, seed = 1, mode = "scene", photos = [], withCut
   const out = [];
   for (let i = 0; i < total; i++) {
     const spec = Object.fromEntries(Object.entries(axes).map(([k, v]) => [k, v[i]]));
-    // a floating product or an arch needs its own box; on a full-canvas photo both read as
-    // a hole in the banner rather than a product
-    if (FULL_CANVAS_LAYOUTS.has(spec.layout) && (spec.product === "arch" || spec.product === "cutoutFloat")) {
-      spec.product = "bottomCrop";
-    }
+    // Drawn here rather than up front because the layout decides which treatments are available.
+    if (varies.has("product")) spec.product = nextProduct(spec.layout);
     // Outside scene mode the words and the photo are pinned to the Reference Scene, so the
     // pairing is skipped: a Mode that holds `photo` still is asserting content is not the
     // variable under study, and re-picking it here would silently break that.

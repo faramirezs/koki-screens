@@ -270,15 +270,20 @@ export const REFERENCE = {
 
 /**
  * A Mode is the question a deck asks, expressed as the axes it is allowed to vary. Every axis it
- * does not vary is pinned to REFERENCE, so two Banners in one deck differ in the axis under study
- * and in nothing else.
+ * does not vary is pinned to REFERENCE, so Banners within a Mode vary only the axes belonging to
+ * the subsystem under study, and every axis outside it stays fixed.
  *
  * That is the whole point. The scene deck varies 13 axes at once, and a preference expressed in it
- * cannot be attributed to any one of them.
+ * cannot be attributed to any one of them. Note that a Mode may vary several axes at once -
+ * Composition varies seven - so this is not a one-variable A/B test. It is the design problem cut
+ * into subsystems, each judged with the others held still.
  *
- *   animated   build the Timeline? false leaves every Element at its settled pose, because the
- *              Timeline is what moves an Element away from that pose.
- *   background "frozen" stops the sheets where they are; "live" lets them slide.
+ * A Scene has two independent timelines, and a Mode says which of them to build:
+ *
+ *   energy       the background's travel. `bgEnergy` is a curve on `--energy`, so a Mode that
+ *                does not build this cannot show the difference between swell and flat.
+ *   choreography the panel and the cast: Enter, Idle, Exit.
+ *   background   "frozen" stops the sheets where they are; "live" lets them slide.
  */
 export const MODES = {
   composition: {
@@ -286,7 +291,8 @@ export const MODES = {
     label: "Composition",
     question: "Does this design work as a still?",
     varies: ["paletteName", "layout", "type", "badge", "cta", "product", "decor"],
-    animated: false,
+    energy: false,
+    choreography: false,
     background: "frozen",
   },
   background: {
@@ -294,7 +300,8 @@ export const MODES = {
     label: "Background",
     question: "Does the background support the content, or compete with it?",
     varies: ["bg", "bgEnergy"],
-    animated: false,
+    energy: true, // without this, all four bgEnergy values render identically
+    choreography: false,
     background: "live",
   },
   motion: {
@@ -302,7 +309,8 @@ export const MODES = {
     label: "Motion",
     question: "Does the choreography read, and does it suit each Role?",
     varies: ["motion", "roleMotion"],
-    animated: true,
+    energy: true, // pinned to REFERENCE, so it is constant across the deck
+    choreography: true,
     background: "live",
   },
   scene: {
@@ -310,7 +318,8 @@ export const MODES = {
     label: "Scene",
     question: "Does the whole thing work together?",
     varies: null, // null = every axis, which is the deck the lab started with
-    animated: true,
+    energy: true,
+    choreography: true,
     background: "live",
   },
 };
