@@ -1,7 +1,7 @@
 # banner-lab
 
 A design-space search for 1920×1080 signage banners. It renders 960 animated banners from an
-11-axis combinatorial system, shows them in a gallery you can vote on, and joins the votes
+13-axis combinatorial system, shows them in a gallery you can vote on, and joins the votes
 back to the axis values so we can agree on *which combinations* work — not just which
 individual banner happens to be nice.
 
@@ -41,7 +41,7 @@ so `t=0` and `t=LOOP` are visually identical and the loop closes without a jump.
 | cut out subjects | `../screen-ad-generator/.venv/bin/python cutout.py` | `photos2/cut/*.png` |
 | build the deck | `node build.mjs --per-seed 160 --seeds 1,2,3,4,5,6` | `banners.json` (960 specs) |
 | audit the deck | `node audit.mjs` | contrast / overflow / collide / safe-area counts |
-| check the motion | `node motions.mjs` | 18 motions, loop-seam check |
+| check the motion | `node motions.mjs` | loop seam + background energy, one per axis value |
 | screenshot | `node shots.mjs sheet --from 0 --to 12 --cols 3 --freeze 6` | `shots/*.png` |
 | one banner, full size | `node singles.mjs s1-b0002` | `shots/s1-b0002.png` |
 | motion arc | `node shots.mjs strip --id s1-b0001 --n 12 --cols 4` | 12 frames across the loop |
@@ -50,10 +50,14 @@ so `t=0` and `t=LOOP` are visually identical and the loop closes without a jump.
 
 ## Design space
 
-16 palettes × 10 layouts × 10 backgrounds × 10 type treatments × 7 badges × 7 CTAs ×
-7 product treatments × 10 decor sets × 18 motions × 14 copy sets × 225 photos
-= 1.3 × 10¹⁰ combinations. `build.mjs` samples it with a coverage-aware round-robin, so every
-value of every axis appears roughly equally often in the 960.
+16 palettes × 10 layouts × 10 backgrounds × 4 background energies × 10 type treatments ×
+7 badges × 7 CTAs × 7 product treatments × 10 decor sets × 18 motions × 5 role-motion
+distributions × 14 copy sets × 225 photos = 6.2 × 10¹³ combinations. `build.mjs` samples it
+with a coverage-aware round-robin, so every value of every axis appears roughly equally often
+in the 960.
+
+`space.mjs` exports the axis list as `AXES`, and the build summary, the gallery filters and
+`analyze.mjs` all import it — an axis cannot be visible in one and missing from another.
 
 - **Palettes** are 16 hand-tuned sets built only from the KoKitchen tokens in
   `../brand/tokens.css`: `{mode, slide[3], panel, ink, accent, accent2, muted, onAccent}`.
@@ -64,6 +68,22 @@ value of every axis appears roughly equally often in the 960.
   each defined as a layer count, an angle, an opacity and a set of durations. Every duration
   divides 6s, because an `alternate` animation returns to its start after twice its duration —
   that is what lets the background close its own loop inside the 12s banner loop.
+- **Background energy** (4 values) scales how *far* those sheets travel during each Phase, so
+  the background stays loud at the Intro and Tail and goes quiet while the copy is being read.
+  The sheets never stop moving; they stop competing. `flat` is the control and keeps v2's
+  constant speed. The curve is a list of `[seconds, energy]` stops in `space.mjs` and is
+  driven by the same GSAP timeline as the elements — a curve on the CSS clock could not be
+  frozen with `seek(t)`, so every contact sheet and motion strip would show whatever energy
+  the wall clock happened to be at.
+- **Motions** (18) are the Motion family: one gesture — a direction, a travel and an ease —
+  applied to every Element in the Scene at once, so the board reads as a single move. Each
+  Element has three states: **Enter**, **Idle**, **Exit**. A family is not a Preset: a Preset
+  moves one Element, a family moves the whole Scene.
+- **Role motion** (5 values) decides how much of that family each Role takes. `uniform` is the
+  control — every Role takes it whole, which is what v2 shipped. `hierarchy` quiets the copy to
+  0.72 and pushes the badge to 1.30 and the decor to 1.40, so the board gets its energy from
+  the things that are not being read. A Role can take *more* of the family, never a different
+  one: a Scene with four unrelated gestures has no gesture at all.
 - **Layouts**: `productLeft`, `productRight`, `centerStack`, `productBehind`, `bottomBand`,
   `diagonalSplit`, `circleMask`, `fullBleed`, `cornerScrim`, `topBanner`.
 - **Type**: `whiteCaps`, `twoTone`, `outline`, `ribbonKicker`, `boxed`, `mixedBox`, `stacked`,

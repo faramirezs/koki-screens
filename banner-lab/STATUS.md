@@ -26,27 +26,39 @@ node motions.mjs   ->  18 motions, 0 failures  (every loop seam clean)
 12 seconds, one direction, no yoyo. The exit ends on the same off-canvas pose the entrance
 started from, so `t=0` and `t=12` are visually identical and the loop closes with no jump.
 
-| t | what |
-|---|---|
-| 0.0 – 1.5 | **background alone.** Three oversized gradient sheets sliding past each other on an `alternate` ease, never settling |
-| 1.5 – 3.5 | copy panel wipes in, then every element slams onto it, staggered, overshooting (`back.out(2.2)`) |
-| 3.5 – 9.5 | **readable hold.** Every element breathes on alternating half-cycles of a few px, landing back on the settled pose each time |
-| 9.5 – 11.0 | thrown off the canvas the other way from the way they came in (`expo.in`), reverse order |
-| 11.0 – 12.0 | background alone again |
+The loop is told in five **Phases**, declared once in `space.mjs` as `PHASES`. Both the GSAP
+timeline and the background-energy curves are derived from that one object, so a curve cannot
+drift away from the timeline it is meant to follow.
+
+| Phase | t | what |
+|---|---|---|
+| **Intro** | 0.0 – 1.5 | background alone. Three oversized gradient sheets sliding past each other on an `alternate` ease, never settling |
+| **Reveal** | 1.5 – 3.9 | copy panel wipes in, then every element slams onto it, staggered, overshooting (`back.out(2.2)`) |
+| **Hold** | 3.9 – 9.5 | **settled and readable.** Every element breathes on alternating half-cycles of a few px, landing back on the settled pose each time |
+| **Exit** | 9.5 – 11.1 | thrown off the canvas the other way from the way they came in (`expo.in`), reverse order |
+| **Tail** | 11.1 – 12.0 | background alone again, which is what the loop opens on |
+
+The Reveal and Exit boundaries move with the size of the cast (25 ± 4 elements), so the two
+interior numbers above are the timeline's own, not the design's. The five `PHASES` boundaries
+are the design's, and those are what the energy curves are drawn against.
 
 The background is the user's own reference snippet, verbatim: `left:-50%; right:-50%`, an
 `alternate` animation on `translateX(-25%) → translateX(25%)`. Layer durations are drawn from
 **2/3/4/6 s only** — an `alternate` animation returns to its start after twice its duration, so
-every layer must divide 6 s to close its own loop inside the 12 s banner loop.
+every layer must divide 6 s to close its own loop inside the 12 s banner loop. How *far* each
+sheet travels is now scaled by `--energy`, which follows the Phase.
 
 `node shots.mjs strip --id s1-b0003 --n 12 --cols 4` renders the whole loop as 12 frames.
 
 ## Design space
 
-16 palettes × 10 layouts × 10 backgrounds × 10 type treatments × 7 badges × 7 CTAs ×
-7 product treatments × 10 decoration sets × 18 motions × 14 copy sets × 225 photos
-≈ 1.3 × 10¹⁰ combinations. `build.mjs` samples it with a coverage-aware round-robin, so every
-value of every axis appears roughly equally often.
+16 palettes × 10 layouts × 10 backgrounds × 4 background energies × 10 type treatments ×
+7 badges × 7 CTAs × 7 product treatments × 10 decoration sets × 18 motions × 5 role-motion
+distributions × 14 copy sets × 225 photos ≈ 6.2 × 10¹³ combinations. `build.mjs` samples it
+with a coverage-aware round-robin, so every value of every axis appears roughly equally often.
+
+`space.mjs` exports `AXES`, and the build summary, the gallery filters and `analyze.mjs` all
+import it, so an axis cannot be visible in one place and missing from another.
 
 - **Palettes** are 16 hand-tuned sets built only from the KoKitchen tokens in
   `../brand/tokens.css`: `{mode, slide[3], panel, ink, accent, accent2, muted, onAccent}`.
@@ -55,6 +67,16 @@ value of every axis appears roughly equally often.
   text on a light ground. `mode` picks the vignette, so there is no luminance guesswork.
 - **Backgrounds**: `triSlide`, `duoSlide`, `quadSlide`, `softSlide`, `boldSlide`, `blendSlide`,
   `raySlide`, `stripeSlide`, `dotSlide`, `meshSlide`.
+- **Background energy** (4): `flat` (control), `swell`, `swellHard`, `breathe`. How far the
+  sheets travel during each Phase. Measured on the deck: `swell` runs 1.00 → 0.50 → **0.22** →
+  0.48 → 1.00 across Intro/Reveal/Hold/Exit/Tail, `swellHard` reaches **0.07** at Hold, and
+  `breathe` recovers to 0.78 mid-Hold before dipping again. The sheets never stop; they stop
+  competing with the copy.
+- **Motions** (18) are the Motion family: one gesture applied to every Element at once. Each
+  Element has three states — Enter, Idle, Exit.
+- **Role motion** (5): `uniform` (control), `hierarchy`, `textLead`, `productLead`, `hush`.
+  How much of the family each Role takes. Measured on `s1-b0001`: `hierarchy` gives the copy
+  ×0.72 and the badge ×1.30, `hush` ×0.55 on the copy, `uniform` ×1.00 everywhere.
 - **Layouts**: `productLeft`, `productRight`, `centerStack`, `productBehind`, `bottomBand`,
   `diagonalSplit`, `circleMask`, `fullBleed`, `cornerScrim`, `topBanner`.
 - **Type**: `whiteCaps`, `twoTone`, `outline`, `ribbonKicker`, `boxed`, `mixedBox`, `stacked`,
@@ -117,7 +139,16 @@ file after running it.
 
 - `space.mjs` — every axis value and nothing else. No filesystem, so the browser imports the
   same constants the sampler used; if these two ever disagreed, a banner would render as
-  something other than what was sampled.
+  something other than what was sampled. Also holds `PHASES`, `BG_ENERGY_CURVES`,
+  `ROLE_MOTION` and `AXES` — the single source of truth for the timeline's boundaries, the
+  energy curves, the per-Role shares and the list of axes.
+- `GLOSSARY.md` — the language of this context. The shared terms (Banner, Scene, Element,
+  Role, Placement, Motion family, Choreography, Preset, Blueprint) live in
+  [`../GLOSSARY-MAP.md`](../GLOSSARY-MAP.md); this file only defines what is specific to the
+  lab.
+- `docs/adr/` — the two decisions a future reader would otherwise want to undo: why the
+  background's energy follows the Phase, and why the Motion family is shared while its
+  distribution across Roles is a separate axis.
 - `gen.mjs` — the sampler. Re-exports `space.mjs`, adds `generate()` / `loadPhotos()`.
 - `lab.js` — `renderBanner`, `buildMotion`, `settle`, `refit`, `measure`, `fitType`, `fitCopy`,
   `dodgeCopy`, `offPose`. The only place that touches the DOM.
@@ -130,8 +161,11 @@ file after running it.
 - `audit.mjs` / `audit.html` — renders every banner off-screen and measures text contrast
   against the surface it is actually painted on, overflow, safe area, copy/media collision and
   whether the background layers are animating at all.
-- `motions.mjs` / `motions.html` — builds all 18 motions and asserts every element is either in
-  the same pose at both ends of the loop or invisible at both.
+- `motions.mjs` / `motions.html` — builds one banner per value of every axis that can change
+  the motion, and asserts every element is either in the same pose at both ends of the loop or
+  invisible at both, and that the background's energy curve closes on itself. Breaking one
+  curve's final stop produces exactly the four failures you would expect, so the check has
+  teeth.
 - `sheet.html`, `one.html`, `strip.html` — contact sheet, single banner, motion arc.
 - `shots.mjs`, `singles.mjs` — screenshot harnesses (Puppeteer).
 - `serve.mjs` — static server + `POST /feedback` + `GET /feedback`.
@@ -153,6 +187,12 @@ file after running it.
 - `polaroid` and `tiltedCard` rotate the media. Any layout that also needs to offset the media
   must use the standalone `translate` property, not `transform` — same specificity, and the
   later rule silently wins.
+- **The background's slide phase is not seekable.** `--energy` is driven by the timeline, so a
+  frozen frame has the right *energy* for its Phase, but each sheet's `translateX` is still a
+  CSS animation on the wall clock. A contact sheet therefore shows each card mid-slide at an
+  arbitrary position. That is cosmetically harmless — every frame of a looping background is a
+  valid frame — but it means two screenshots of the same banner are not pixel-comparable
+  unless the slide animations are paused and seeked too, which `shots.mjs` does not do.
 
 ## Bugs fixed this round (do not regress)
 
@@ -180,3 +220,14 @@ file after running it.
    `badge:none` as 16 contrast failures.
 9. A cutout product override could put a "SWEET" headline over a rack of ribs; it now prefers a
    cutout inside the allowed category.
+10. `lab.js` documented the loop as `0.0-0.3 / 0.3-1.7 / 1.7-8.3 / 8.3-9.6` while the constants
+    underneath said `1.5 / 3.9 / 9.5 / 11.1` — the comment had drifted a whole revision behind
+    the code. Both now derive from `PHASES`, so there is only one number to be wrong.
+11. `AXES` was copy-pasted into `build.mjs`, `gallery.js` and `analyze.mjs`. Adding an axis to
+    two of the three would have hidden it from the third with no error at all. It is now
+    exported once from `space.mjs`.
+12. The background energy was first built as a CSS `@keyframes` on `--energy`. That worked, and
+    the seam check passed — but a CSS animation runs on the wall clock, so `seek(t)` could not
+    freeze it, and every contact sheet and motion strip showed whatever energy the wall clock
+    happened to be at rather than the energy of the Phase being illustrated. It is now a tween
+    on the GSAP timeline, and `motions.mjs` asserts the curve closes on itself.

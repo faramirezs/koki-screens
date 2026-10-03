@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { AXES } from "./space.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -24,7 +25,6 @@ const MIN = Number(arg("min", 4));
 const MIN_PAIR = Number(arg("min-pair", 2));
 
 const SCORE = { love: 1, good: 0.6, maybe: 0.3, no: 0 };
-const AXES = ["paletteName", "layout", "bg", "type", "badge", "cta", "product", "decor", "motion", "copy", "photo"];
 
 const banners = JSON.parse(readFileSync(bannersPath, "utf8"));
 const byId = new Map(banners.map((b) => [b.id, b]));

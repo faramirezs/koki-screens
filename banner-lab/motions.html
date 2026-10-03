@@ -45,19 +45,34 @@ function snapshot(bn) {
 
 const lines = [];
 let failures = 0;
-const seen = new Set();
 window.__progress = 0;
 
+// One banner per value of every axis that can change the motion. The seam has to hold for
+// every value of bgEnergy and roleMotion, not just for whichever banner happened to be drawn
+// first with a given motion.
+const picked = [];
+const covered = { motion: new Set(), bgEnergy: new Set(), roleMotion: new Set() };
 for (const b of all) {
-  if (seen.has(b.motion)) continue;
-  seen.add(b.motion);
-  window.__progress = seen.size;
+  let fresh = false;
+  for (const axis of Object.keys(covered)) {
+    if (!covered[axis].has(b[axis])) {
+      covered[axis].add(b[axis]);
+      fresh = true;
+    }
+  }
+  if (fresh) picked.push(b);
+}
+
+for (const [pi, b] of picked.entries()) {
+  const tag = `${b.motion} / ${b.bgEnergy} / ${b.roleMotion}`;
+  window.__progress = pi + 1;
   await new Promise((r) => setTimeout(r, 0));
 
   const bn = renderBanner(b);
   stage.appendChild(bn);
   await Promise.all([...bn.querySelectorAll(".bn__img")].map((i) => i.decode().catch(() => {})));
   await settle(bn);
+  const bgEl = bn.querySelector(".bn__bg");
 
   let tl;
   try {
@@ -72,8 +87,20 @@ for (const b of all) {
   tl.pause();
   tl.seek(0);
   const start = snapshot(bn);
+  const energy0 = Number(getComputedStyle(bgEl).getPropertyValue("--energy"));
   tl.seek(LOOP - 0.001); // just before the wrap, so the exit tween is effectively finished
   const end = snapshot(bn);
+  const energyEnd = Number(getComputedStyle(bgEl).getPropertyValue("--energy"));
+
+  // The background's energy curve has to close on itself too. A timeline that returns every
+  // element to its start pose still jumps if the background it returns to is at a different
+  // energy than the one the loop opened on.
+  let energyOk = true;
+  let energyWhy = "";
+  if (Math.abs(energy0 - energyEnd) > 0.01) {
+    energyOk = false;
+    energyWhy = `energy ${energy0} at t=0 vs ${energyEnd} at t=${LOOP}s`;
+  }
 
   // seek() on an infinitely repeating timeline wraps modulo the duration, so seeking to LOOP
   // would land back on frame zero and the check would pass by construction. Stay 1ms short.
@@ -93,19 +120,22 @@ for (const b of all) {
   });
 
   if (!bgOk) {
-    lines.push(`FAIL ${b.motion}: background layers are not animating`);
+    lines.push(`FAIL ${tag}: background layers are not animating`);
+    failures++;
+  } else if (!energyOk) {
+    lines.push(`FAIL ${tag}: background energy does not close the loop - ${energyWhy}`);
     failures++;
   } else if (jumps.length) {
     const detail = jumps.slice(0, 3).map((i) => `${names[i]}\n   start ${start[i].key} op=${start[i].opacity}\n   end   ${end[i].key} op=${end[i].opacity}`).join("\n");
-    lines.push(`FAIL ${b.motion}: ${jumps.length}/${start.length} elements jump at the loop seam\n${detail}`);
+    lines.push(`FAIL ${tag}: ${jumps.length}/${start.length} elements jump at the loop seam\n${detail}`);
     failures++;
   } else {
-    lines.push(`ok   ${b.motion.padEnd(20)} ${LOOP}s loop  ${start.length} elements  ${slides.length} bg layers  seam clean`);
+    lines.push(`ok   ${tag.padEnd(44)} ${LOOP}s loop  ${String(start.length).padStart(3)} elements  ${slides.length} bg layers  seam clean`);
   }
   bn.remove();
 }
 
-window.__report = { text: lines.join("\n") + `\n\n${seen.size} motions, ${failures} failures`, failures };
+window.__report = { text: lines.join("\n") + `\n\n${picked.length} combinations, ${failures} failures`, failures };
 window.__ready = true;
 </script>
 <script>

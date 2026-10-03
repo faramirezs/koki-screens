@@ -9,7 +9,7 @@
  * with the loop-seam check, which means a banner picked here can be exported to video with
  * the motion it was judged on.
  */
-import { BG_RECIPES, MOTION_SPEC, NEEDS_CUTOUT } from "./space.mjs";
+import { BG_RECIPES, MOTION_SPEC, NEEDS_CUTOUT, PHASES, ROLE_MOTION, BG_ENERGY_CURVES } from "./space.mjs";
 
 
 // --------------------------------------------------------------------------- //
@@ -152,7 +152,8 @@ export function renderBanner(spec) {
   bn.dataset.treatment = treatment;
   bn.classList.add(
     `bn--bg-${spec.bg}`, `bn--lay-${spec.layout}`, `bn--type-${spec.type}`,
-    `bn--badge-${spec.badge}`, `bn--cta-${spec.cta}`, `bn--prod-${treatment}`
+    `bn--badge-${spec.badge}`, `bn--cta-${spec.cta}`, `bn--prod-${treatment}`,
+    `bn--energy-${spec.bgEnergy || "flat"}`, `bn--roles-${spec.roleMotion || "uniform"}`
   );
   if (p.mode === "light") bn.classList.add("bn--light");
 
@@ -201,23 +202,27 @@ export function renderBanner(spec) {
 const q = (root, sel) => [...root.querySelectorAll(sel)];
 
 /**
- * One loop is one story, and the story is the brief:
+ * One loop is one story, told in five Phases (see PHASES in space.mjs):
  *
- *   0.0 - 0.3   the background alone, already sliding
- *   0.3 - 1.7   the panel wipes in and the elements slam into it, staggered
- *   1.7 - 8.3   everything breathes while you read it
- *   8.3 - 9.6   the elements are thrown back off the canvas
- *   9.6 - 12.0  the background alone again
+ *   Intro   0.0 - 1.5   the background alone, already sliding
+ *   Reveal  1.5 - 3.9   the panel wipes in and the elements slam into it, staggered
+ *   Hold    3.9 - 9.5   everything breathes while you read it
+ *   Exit    9.5 - 11.1  the elements are thrown back off the canvas
+ *   Tail   11.1 - 12.0  the background alone again
+ *
+ * The Reveal and Exit boundaries move with the size of the cast, so the two interior numbers
+ * are the timeline's own, not the design's. The phase boundaries themselves come from PHASES,
+ * which is also what the background-energy curves in lab.css are drawn against.
  *
  * The timeline does NOT yoyo: at t=LOOP every element is back in exactly the pose it had at
  * t=0, because the exit ends on the same off-canvas pose the entrance started from. So the
  * loop closes without a jump and without a reversed copy of the entrance.
  */
-export const LOOP = 12;
-const T_IN = 1.50;       // the background gets the stage to itself first: 1.5s of the 12s
+export const LOOP = PHASES.tail[1];
+const T_IN = PHASES.reveal[0];  // the background gets the stage to itself first
 const IN_DUR = 0.60;
 const IN_STAGGER = 0.08;
-const HOLD_END = 9.50;   // ~6s of settled, readable time for a typical cast
+const HOLD_END = PHASES.exit[0]; // ~6s of settled, readable time for a typical cast
 const OUT_DUR = 0.55;
 const OUT_STAGGER = 0.045;
 const EASE_IN = "back.out(2.2)"; // the overshoot is the impact
@@ -253,9 +258,25 @@ export function buildMotion(root, spec) {
   const m = MOTION_SPEC[spec.motion] || MOTION_SPEC.slamLeft;
   const tl = gsap.timeline({ repeat: -1, paused: true });
 
+  // ---- the background's energy: how far the sheets travel during each Phase ----
+  // Driven from THIS timeline rather than from CSS, so that seeking to a Phase shows the
+  // energy that Phase actually has. `flat` has no curve and keeps full travel throughout.
+  const bgEl = root.querySelector(".bn__bg");
+  const curve = BG_ENERGY_CURVES[spec.bgEnergy];
+  if (bgEl && curve) {
+    let prev = 0;
+    for (const [t, v] of curve) {
+      tl.to(bgEl, { "--energy": v, duration: Math.max(0.001, t - prev), ease: "none" }, prev);
+      prev = t;
+    }
+  }
+
   const panel = root.querySelector(".bn__copy");
-  const words = q(root, ".bn__copy > *");
-  const extras = [...q(root, ".bn__badge"), ...q(root, ".bn__media"), ...q(root, ".bn__decor > *")];
+  // One Motion family, shared by the whole cast, so the board reads as a single gesture.
+  // `roleMotion` decides how much of that family each Role takes - ROLE_MOTION in space.mjs.
+  const share = ROLE_MOTION[spec.roleMotion] || ROLE_MOTION.uniform;
+  const of = (r) => share[r] ?? 1;
+  const idleOf = share.idle ?? 1;
 
   // ---- the panel wipes in first: it is the ground the words land on ----
   if (panel) {
@@ -268,12 +289,19 @@ export function buildMotion(root, spec) {
     );
   }
 
-  // ---- the cast: words in reading order, then the badge, then the photo ----
-  const cast = [...words, ...extras];
-  for (const [i, node] of cast.entries()) {
+  // ---- the cast: words in reading order, then the badge, the photo, then the decor ----
+  const cast = [
+    ...q(root, ".bn__copy > *").map((node) => ({ node, role: "copy" })),
+    ...q(root, ".bn__badge").map((node) => ({ node, role: "badge" })),
+    ...q(root, ".bn__media").map((node) => ({ node, role: "media" })),
+    ...q(root, ".bn__decor > *").map((node) => ({ node, role: "decor" })),
+  ];
+  for (const [i, { node, role }] of cast.entries()) {
+    const f = of(role);
     const at = T_IN + i * IN_STAGGER;
     const off = offPose(node, root, m.in.dir);
-    const start = { x: off.x, y: off.y, rotation: m.in.rot || 0, scale: m.in.scale ?? 1, opacity: 0 };
+    // every travel, rotation and scale below is the family's, scaled by the Role's share
+    const start = { x: off.x * f, y: off.y * f, rotation: (m.in.rot || 0) * f, scale: 1 + ((m.in.scale ?? 1) - 1) * f, opacity: 0 };
     const settle = { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, duration: IN_DUR, ease: EASE_IN };
     if (m.in.blur) start.filter = `blur(${m.in.blur}px)`;
     if (m.in.blur) settle.filter = "blur(0px)";
@@ -285,6 +313,7 @@ export function buildMotion(root, spec) {
 
     // ---- breathing: alternating half-cycles that end on the settled pose ----
     const amp = IDLE[m.idle] || IDLE.floatY;
+    const ia = f * idleOf;
     const idleFrom = at + IN_DUR;
     const idleTo = HOLD_END - 0.34;
     const span = Math.max(0, idleTo - idleFrom);
@@ -293,10 +322,10 @@ export function buildMotion(root, spec) {
     for (let k = 0; k < steps; k++) {
       const up = k % 2 === 0;
       const tween = { duration: step, ease: "sine.inOut" };
-      if (amp.y) tween.y = up ? amp.y : -amp.y * 0.45;
-      if (amp.x) tween.x = up ? amp.x : -amp.x * 0.45;
-      if (amp.rot) tween.rotation = up ? amp.rot : -amp.rot;
-      if (amp.scale) tween.scale = up ? amp.scale : 1;
+      if (amp.y) tween.y = (up ? amp.y : -amp.y * 0.45) * ia;
+      if (amp.x) tween.x = (up ? amp.x : -amp.x * 0.45) * ia;
+      if (amp.rot) tween.rotation = (up ? amp.rot : -amp.rot) * ia;
+      if (amp.scale) tween.scale = up ? 1 + (amp.scale - 1) * ia : 1;
       tl.to(node, tween, idleFrom + k * step);
     }
     tl.to(node, { x: 0, y: 0, rotation: 0, scale: 1, duration: 0.34, ease: "power2.out" }, idleTo);
@@ -304,7 +333,7 @@ export function buildMotion(root, spec) {
     // ---- the exit: last in, first out, thrown the other way ----
     const outAt = HOLD_END + (cast.length - 1 - i) * OUT_STAGGER;
     const away = offPose(node, root, m.out.dir);
-    const end = { x: away.x, y: away.y, rotation: m.out.rot || 0, scale: m.out.scale ?? 1, opacity: 0, duration: OUT_DUR, ease: EASE_OUT };
+    const end = { x: away.x * f, y: away.y * f, rotation: (m.out.rot || 0) * f, scale: 1 + ((m.out.scale ?? 1) - 1) * f, opacity: 0, duration: OUT_DUR, ease: EASE_OUT };
     if (m.out.blur) end.filter = `blur(${m.out.blur}px)`;
     if (m.out.clip) end.clipPath = m.out.dir === "top" ? "inset(0 0 100% 0)" : "inset(0 0 0 100%)";
     tl.to(node, end, outAt);

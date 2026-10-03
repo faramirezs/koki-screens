@@ -156,3 +156,89 @@ export const FULL_CANVAS_LAYOUTS = new Set(["fullBleed", "cornerScrim"]);
 
 /** Treatments that only look right with a real alpha cutout. */
 export const NEEDS_CUTOUT = new Set(["cutoutFloat", "arch"]);
+
+// --------------------------------------------------------------------------- //
+// time
+// --------------------------------------------------------------------------- //
+
+/**
+ * The five Phases of the loop, in seconds. This is the single source of truth: the GSAP
+ * timeline in lab.js and the background-energy keyframes in lab.css are both derived from
+ * these numbers, so a curve cannot drift away from the timeline it is meant to follow.
+ *
+ * The boundaries are design intent, not arithmetic. A Scene whose cast is small finishes
+ * entering before the Reveal boundary and one with a big cast finishes just after it; the
+ * background is allowed to be calm either way.
+ */
+export const PHASES = {
+  intro:  [0, 1.5],     // the background has the stage to itself
+  reveal: [1.5, 3.5],   // the panel wipes in and the elements enter
+  hold:   [3.5, 9.5],   // settled and readable - the Settled Composition
+  exit:   [9.5, 11.0],  // the elements are thrown back off the canvas
+  tail:   [11.0, 12.0], // the background alone again, which is what the loop opens on
+};
+
+// --------------------------------------------------------------------------- //
+// how the scene moves, and how hard the background pushes
+// --------------------------------------------------------------------------- //
+
+/**
+ * How far the background travels during each Phase, as a fraction of the travel it would make
+ * at full energy. The sheets always slide; this only decides how far. A quiet Hold is the
+ * point - the copy should not have to fight its own background for six seconds.
+ *
+ * A curve is a list of [seconds, energy] stops, linearly joined, and it is driven by the same
+ * GSAP timeline as the elements. That matters: a curve on the CSS clock could not be frozen
+ * with `seek(t)`, so every contact sheet and motion strip would show whatever energy the wall
+ * clock happened to be at rather than the energy of the Phase it was illustrating.
+ *
+ * `flat` is the control - no curve, full travel for the whole loop, which is what v2 shipped.
+ */
+const at = (phase, i) => PHASES[phase][i];
+export const BG_ENERGY_CURVES = {
+  flat: null,
+  /* loud at the edges, quiet while you read */
+  swell: [
+    [0, 1], [at("reveal", 0), .78], [at("reveal", 1), .22],
+    [at("exit", 0), .22], [at("exit", 1), 1], [at("tail", 1), 1],
+  ],
+  /* the same shape pushed much further: how quiet can the Hold get before the board dies? */
+  swellHard: [
+    [0, 1], [at("reveal", 0), .55], [at("reveal", 1), .07],
+    [at("exit", 0), .07], [at("exit", 1), 1], [at("tail", 1), 1],
+  ],
+  /* two calm windows instead of one plateau */
+  breathe: [
+    [0, 1], [at("reveal", 0), .68], [at("reveal", 1), .28],
+    [6.0, .78], [at("exit", 0), .28], [at("exit", 1), 1], [at("tail", 1), 1],
+  ],
+};
+export const BG_ENERGY = Object.keys(BG_ENERGY_CURVES);
+
+/** The parts of a Scene that can take their own share of the motion. Reading order. */
+export const ROLES = ["copy", "media", "badge", "decor"];
+
+/**
+ * How much of the Scene's Motion family each Role takes. The family is decided once per Scene
+ * so the board reads as a single gesture; this decides who carries it and who stays quiet.
+ * `idle` scales the breathing for every Role at once.
+ *
+ * `uniform` is the control: every Role takes the family whole, which is what v2 shipped.
+ */
+export const ROLE_MOTION = {
+  uniform:     { copy: 1.00, media: 1.00, badge: 1.00, decor: 1.00, idle: 1.00 },
+  hierarchy:   { copy: 0.72, media: 1.05, badge: 1.30, decor: 1.40, idle: 1.00 },
+  textLead:    { copy: 1.25, media: 0.85, badge: 0.95, decor: 0.70, idle: 0.90 },
+  productLead: { copy: 0.62, media: 1.35, badge: 1.10, decor: 0.88, idle: 1.00 },
+  hush:        { copy: 0.55, media: 0.80, badge: 1.10, decor: 1.15, idle: 0.40 },
+};
+
+/**
+ * Every field a Banner carries, in display order. One list, imported by the build summary,
+ * the gallery's filters and the analysis, so an axis can never show up in one and be missing
+ * from another.
+ */
+export const AXES = [
+  "paletteName", "layout", "bg", "bgEnergy", "type", "badge", "cta",
+  "product", "decor", "motion", "roleMotion", "copy", "photo",
+];

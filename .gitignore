@@ -9,3 +9,7 @@ __pycache__/
 
 # node
 node_modules/
+
+# local agent tooling, installed by the harness - not part of the design workspace
+.agents/
+skills-lock.json

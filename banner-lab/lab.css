@@ -48,9 +48,22 @@
  *
  * Each sheet's duration divides half the loop, so the composite is identical at t=0 and
  * t=LOOP and the export can loop without a jump.
+ *
+ * How FAR each sheet travels is scaled by --energy, which follows the Phase. A sheet is 2x
+ * the canvas width and overhangs 50% on each side, so +-25% of its own width is exactly what
+ * covers the canvas at energy 1; every lower value still covers it, and travels proportionally
+ * less. The sheets never stop - they only stop competing with the copy.
  */
 .bn__bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
 .bn__bgBase { position: absolute; inset: 0; }
+
+/* Registered, so the value interpolates. An unregistered custom property is a string, and
+ * `calc(-25% * var(--energy))` inside a keyframe would then never animate.
+ *
+ * The curve that drives it is NOT here: it lives in space.mjs as BG_ENERGY_CURVES and is
+ * applied by the GSAP timeline, so that `seek(t)` freezes the background at the same moment
+ * as the elements. `flat` is the control and never touches this value. */
+@property --energy { syntax: "<number>"; inherits: true; initial-value: 1; }
 
 .bn__slide {
   position: absolute;
@@ -61,8 +74,8 @@
   will-change: transform;
 }
 @keyframes kkSlide {
-  0%   { transform: translateX(-25%); }
-  100% { transform: translateX(25%); }
+  0%   { transform: translateX(calc(-25% * var(--energy, 1))); }
+  100% { transform: translateX(calc(25% * var(--energy, 1))); }
 }
 
 .bn__slide--stripes {

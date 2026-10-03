@@ -14,7 +14,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PALETTES, LAYOUTS, BACKGROUNDS, TYPES, BADGES, CTAS, PRODUCTS, DECOR, MOTIONS, COPY, COPY_CATS, FULL_CANVAS_LAYOUTS, NEEDS_CUTOUT, WIDTH, HEIGHT } from "./space.mjs";
+import { PALETTES, LAYOUTS, BACKGROUNDS, TYPES, BADGES, CTAS, PRODUCTS, DECOR, MOTIONS, COPY, COPY_CATS, FULL_CANVAS_LAYOUTS, NEEDS_CUTOUT, WIDTH, HEIGHT, BG_ENERGY, ROLE_MOTION } from "./space.mjs";
 
 export * from "./space.mjs";
 
@@ -60,12 +60,14 @@ export function generate({ count, seed = 1, photos = [], withCut = [], cutOf = {
     palette: deck(rng, Object.keys(PALETTES), count),
     layout: deck(rng, LAYOUTS, count),
     bg: deck(rng, BACKGROUNDS, count),
+    bgEnergy: deck(rng, BG_ENERGY, count),
     type: deck(rng, TYPES, count),
     badge: deck(rng, BADGES, count),
     cta: deck(rng, CTAS, count),
     product: deck(rng, PRODUCTS, count),
     decor: deck(rng, DECOR, count),
     motion: deck(rng, MOTIONS, count),
+    roleMotion: deck(rng, Object.keys(ROLE_MOTION), count),
     copy: deck(rng, COPY.map((c) => c.key), count),
     photo: deck(rng, photos.length ? photos : ["none"], count),
   };

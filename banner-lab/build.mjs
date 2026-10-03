@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generate, loadPhotos } from "./gen.mjs";
+import { AXES } from "./space.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -31,7 +32,7 @@ for (const seed of seeds) {
 writeFileSync(outPath, JSON.stringify(all, null, 1) + "\n");
 
 const axes = {};
-for (const k of ["paletteName", "layout", "bg", "type", "badge", "cta", "product", "decor", "motion", "copy", "photo"]) {
+for (const k of AXES) {
   axes[k] = new Set(all.map((b) => (k === "copy" ? b.copy.key : b[k]))).size;
 }
 console.log(`${all.length} banners (seeds ${seeds.join(",")}) from ${pool.photos.length} photos, ${pool.withCut.length} with cutouts`);

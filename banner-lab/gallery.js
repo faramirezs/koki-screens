@@ -8,8 +8,8 @@
  * makes "which combination is good" answerable instead of a memory test.
  */
 import { renderBanner, buildMotion, measure, settle } from "./lab.js";
+import { AXES } from "./space.mjs";
 
-const AXES = ["paletteName", "layout", "bg", "type", "badge", "cta", "product", "decor", "motion", "copy", "photo"];
 const VERDICTS = [
   { key: "love", label: "🔥", title: "love it" },
   { key: "good", label: "✓", title: "good" },
