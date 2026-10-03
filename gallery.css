@@ -1,0 +1,71 @@
+/* gallery.css — the chrome around the banners. lab.css owns the banners themselves. */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #14161a;
+  color: #e7ebf0;
+  font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ------------------------------------------------------------------ bar */
+.bar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding: 10px 16px;
+  background: #1b1f26; border-bottom: 1px solid #2b313b;
+}
+.bar__title { font-weight: 700; font-size: 15px; letter-spacing: .01em; }
+.bar__count { color: #7d8794; font-weight: 500; margin-left: 6px; }
+.bar__filters { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+.bar__right { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.chk { display: flex; align-items: center; gap: 5px; color: #9aa4b2; white-space: nowrap; }
+select, button {
+  background: #232932; color: #e7ebf0; border: 1px solid #333b47;
+  border-radius: 6px; padding: 5px 9px; font: inherit; cursor: pointer;
+}
+button:hover, select:hover { background: #2b323d; }
+button.on { background: #2f6feb; border-color: #2f6feb; color: #fff; }
+
+.legend { padding: 8px 16px; color: #7d8794; font-size: 12px; border-bottom: 1px solid #22272f; }
+
+/* ------------------------------------------------------------------ grid */
+.grid {
+  display: grid; gap: 18px; padding: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+}
+
+.card {
+  background: #1b1f26; border: 1px solid #2b313b; border-radius: 10px; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.card--liked { border-color: #2e7d32; box-shadow: 0 0 0 1px #2e7d32 inset; }
+.card--rejected { opacity: .38; }
+.card--flagged { border-color: #7a5a12; }
+
+.card__stage { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #0b0d10; }
+.card__inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+.card__meta { padding: 9px 11px; display: flex; flex-direction: column; gap: 7px; }
+.card__id { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.card__id code { color: #9ecbff; font-weight: 600; }
+.card__axes { display: flex; flex-wrap: wrap; gap: 4px; }
+.axis {
+  background: #232932; border: 1px solid #333b47; border-radius: 4px;
+  padding: 1px 6px; font-size: 11px; color: #a9b4c2; white-space: nowrap;
+}
+.axis b { color: #dfe6ee; font-weight: 600; }
+.axis--hl { border-color: #2f6feb; }
+
+.card__verdicts { display: flex; gap: 6px; }
+.card__verdicts button { flex: 1; padding: 6px 0; font-size: 12px; }
+.card__note { width: 100%; background: #14181e; border: 1px solid #2b313b; border-radius: 6px; color: #e7ebf0; padding: 5px 8px; font: inherit; }
+
+.flag { font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+.flag--bad { background: #7f1d1d; color: #fecaca; }
+.flag--warn { background: #78350f; color: #fde68a; }
+
+.export-box {
+  position: fixed; inset: 10% 10%; z-index: 200;
+  background: #0f1216; color: #cfe3ff; border: 1px solid #2f6feb; border-radius: 10px;
+  padding: 14px; font: 12px/1.5 ui-monospace, monospace; resize: none;
+}

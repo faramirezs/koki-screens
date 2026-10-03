@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="lab.css">
+<style>#stage{position:fixed;left:-99999px;top:0;width:1920px}</style></head>
+<body>
+<div id="stage"></div>
+<script src="vendor/gsap.min.js"></script>
+<script type="module">
+/*
+ * audit.html — renders every banner off-screen and reports what is actually wrong with it.
+ *
+ * Read the numbers, not the intent: every flag here is a measurement taken off the rendered
+ * DOM, so a rule that "should" be fine but is not shows up as a count.
+ *
+ *   overflow  a text run is wider than the box it has to fit in
+ *   collide   the copy panel and the product cover more than 12% of the same pixels
+ *   safe      a text block has escaped the banner or the 5% margin
+ *   contrast  a text colour is below 3:1 against the surface it is actually painted on
+ *   nobg      a banner rendered with no animated background layers
+ */
+import { renderBanner, measure, settle } from "./lab.js";
+
+const all = await fetch("banners.json").then((r) => r.json());
+const stage = document.getElementById("stage");
+// Text metrics depend on the font, and renderBanner re-fits on the next frame. Measuring
+// before that lands would report the fallback font's overflow, not the banner's.
+await document.fonts.ready;
+
+const toRgb = (s) => {
+  // Chrome serialises a color-mix() result as color(srgb r g b / a), so both forms matter
+  const srgb = s.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/);
+  if (srgb) return { r: +srgb[1] * 255, g: +srgb[2] * 255, b: +srgb[3] * 255, a: srgb[4] === undefined ? 1 : +srgb[4] };
+  const m = s.match(/rgba?\(([\d.]+)[, ]+([\d.]+)[, ]+([\d.]+)(?:[, /]+([\d.]+))?\)/);
+  return m ? { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] } : null;
+};
+const lin = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+const lum = (c) => 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+
+/**
+ * What is actually painted under an element: every background colour between the element and
+ * the banner root, composited bottom-up. Since v2 every text block sits on an opaque panel or
+ * paints its own opaque fill, so this walk is the whole story — the sliding gradient layers
+ * are siblings and never show through the text.
+ */
+function behind(el, root) {
+  const stack = []; // top-most first
+  for (let n = el; n && n !== root.parentElement; n = n.parentElement) {
+    const c = toRgb(getComputedStyle(n).backgroundColor);
+    if (c && c.a > 0.01) stack.push(c);
+  }
+  if (!stack.length) return null;
+  let out = { r: 255, g: 255, b: 255 };
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const c = stack[i];
+    out = { r: c.r * c.a + out.r * (1 - c.a), g: c.g * c.a + out.g * (1 - c.a), b: c.b * c.a + out.b * (1 - c.a) };
+  }
+  return out;
+}
+
+const tally = {};
+const byAxis = {};
+const worst = [];
+const TEXTS = ".bn__headline, .bn__line, .bn__kicker, .bn__sub, .bn__cta, .bn__badge";
+
+for (const b of all) {
+  const bn = renderBanner(b);
+  stage.appendChild(bn);
+  await settle(bn);
+  const flags = measure(bn);
+
+  // the brief is a moving background; a banner without slide layers is a regression
+  const slides = bn.querySelectorAll(".bn__slide");
+  if (!slides.length || [...slides].some((s) => getComputedStyle(s).animationName !== "kkSlide")) flags.push("nobg");
+
+  for (const el of bn.querySelectorAll(TEXTS)) {
+    // a display:none badge still reports a colour and an ancestor background; it is not text
+    if (!el.getClientRects().length) continue;
+    const bg = behind(el, bn);
+    if (!bg) continue;
+    const fg = toRgb(getComputedStyle(el).color);
+    if (!fg || fg.a < 0.4) continue;
+    const r = ratio(fg, bg);
+    // 3:1 is the WCAG floor for display type; below that a headline is not readable
+    if (r < 3) {
+      tally.contrast = (tally.contrast || 0) + 1;
+      byAxis.contrast = byAxis.contrast || {};
+      for (const ax of ["paletteName", "layout", "bg", "type", "badge", "cta", "product"]) {
+        byAxis.contrast[`${ax}=${b[ax]}`] = (byAxis.contrast[`${ax}=${b[ax]}`] || 0) + 1;
+      }
+      if (worst.length < 14) worst.push(`${b.id} ${el.className} ${r.toFixed(2)}:1 fg=rgb(${fg.r.toFixed(0)},${fg.g.toFixed(0)},${fg.b.toFixed(0)}) on rgb(${bg.r.toFixed(0)},${bg.g.toFixed(0)},${bg.b.toFixed(0)}) palette=${b.paletteName} layout=${b.layout} type=${b.type} badge=${b.badge}`);
+    }
+  }
+  for (const f of flags) {
+    tally[f] = (tally[f] || 0) + 1;
+    if (worst.length < 14) worst.push(`${b.id} flag=${f} palette=${b.paletteName} layout=${b.layout} type=${b.type} badge=${b.badge} product=${b.product}`);
+    byAxis[f] = byAxis[f] || {};
+    for (const ax of ["paletteName", "layout", "bg", "type", "badge", "cta", "product"]) {
+      byAxis[f][`${ax}=${b[ax]}`] = (byAxis[f][`${ax}=${b[ax]}`] || 0) + 1;
+    }
+  }
+  bn.remove();
+}
+
+const lines = [`${all.length} banners`];
+if (!Object.keys(tally).length) lines.push("no defects");
+for (const [f, n] of Object.entries(tally).sort((a, c) => c[1] - a[1])) {
+  lines.push(`${f}: ${n}`);
+  const top = Object.entries(byAxis[f]).sort((a, c) => c[1] - a[1]).slice(0, 6);
+  lines.push("  worst: " + top.map(([k, v]) => `${k}:${v}`).join(" "));
+}
+if (worst.length) lines.push("", "examples:", ...worst.map((w) => "  " + w));
+window.__report = lines.join("\n");
+window.__ready = true;
+</script></body></html>

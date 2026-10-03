@@ -1,0 +1,5 @@
+node_modules
+feedback.jsonl
+report.md
+*.log
+.DS_Store

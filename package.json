@@ -1,0 +1,23 @@
+{
+  "name": "banner-lab",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Animated 1920x1080 signage banners sampled from an 11-axis design space, built only from the KoKitchen palette.",
+  "scripts": {
+    "serve": "node serve.mjs --port 7788",
+    "build": "node build.mjs --per-seed 160 --seeds 1,2,3,4,5,6",
+    "audit": "node audit.mjs",
+    "motions": "node motions.mjs",
+    "photos": "python3 fetch_photos.py",
+    "contact": "node contact.mjs",
+    "cutout": "python3 cutout.py",
+    "analyze": "node analyze.mjs --min 4 --min-pair 2",
+    "gtest": "node gtest.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.12.0",
+    "sharp": "^0.35.5"
+  },
+  "comment": "The screenshot and audit harnesses drive an already-installed Chromium through puppeteer-core; they do not download one. The Python steps additionally need Pillow and rembg (see README)."
+}

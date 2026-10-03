@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="lab.css">
+<style>
+  body { margin: 0; background: #0b0d10; }
+  .grid { display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr); gap: 6px; padding: 6px; }
+  .cell { position: relative; aspect-ratio: 16/9; overflow: hidden; background: #000; }
+  .cell > .bn { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .cell__t { position: absolute; right: 4px; bottom: 4px; z-index: 99; background: #000b; color: #9ecbff;
+    font: 600 12px/1.4 ui-monospace, monospace; padding: 1px 5px; }
+</style></head>
+<body>
+<div class="grid" id="grid"></div>
+<script src="vendor/gsap.min.js"></script>
+<script type="module">
+import { renderBanner, buildMotion, settle, LOOP } from "./lab.js";
+
+const params = new URLSearchParams(location.search);
+const id = params.get("id");
+const n = Number(params.get("n") || 12);
+const cols = Number(params.get("cols") || 4);
+
+const all = await fetch("banners.json").then((r) => r.json());
+const spec = all.find((b) => b.id === id) || all[0];
+
+document.documentElement.style.setProperty("--cols", cols);
+const grid = document.getElementById("grid");
+const timelines = [];
+const built = [];
+const scale = (window.innerWidth / cols - 6) / spec.width;
+
+for (let i = 0; i < n; i++) {
+  const cell = document.createElement("div");
+  cell.className = "cell";
+  const bn = renderBanner(spec);
+  bn.style.transform = `scale(${scale})`;
+  cell.appendChild(bn);
+  const tag = document.createElement("div");
+  tag.className = "cell__t";
+  cell.appendChild(tag);
+  grid.appendChild(cell);
+  built.push([bn, tag]);
+}
+
+await Promise.all([...document.querySelectorAll(".bn__img")].map((i) => i.decode().catch(() => {})));
+for (const [bn] of built) await settle(bn);
+for (const [bn, tag] of built) timelines.push({ tl: buildMotion(bn, spec), tag });
+
+// one row is exactly one loop, so the frames read as the story: background, entrance, hold,
+// exit, background again
+timelines.forEach(({ tl, tag }, i) => {
+  const t = (LOOP * i) / n;
+  tl.pause();
+  tl.seek(t);
+  tag.textContent = `${t.toFixed(1)}s`;
+});
+window.__ready = true;
+</script></body>
+</html>
