@@ -1,0 +1,343 @@
+/*
+ * lab.css — the banner design system for the lab.
+ *
+ * Every banner is authored at 1920x1080 and previewed with a CSS transform, so one
+ * stylesheet covers both the gallery thumbnail and the full-size render.
+ *
+ * All inner sizes are `calc(var(--u) * N)`. `--u` is set per banner by lab.js
+ * (min(width, height*1.78)/100 = 19.2px at 1080p).
+ *
+ * Two rules shape everything else:
+ *   1. The background always moves. It is three oversized gradient sheets sliding past each
+ *      other on an `alternate` ease, never a still image.
+ *   2. Text only ever sits on `--panel`, never on the sliding background. That is what makes
+ *      a moving background safe: the panel is opaque enough that the text contrast is a
+ *      property of the palette, not of whatever colour happens to be sliding past.
+ */
+
+/* ------------------------------------------------------------------ type */
+/* KoKitchen is Montserrat. Self-hosted so a render never depends on the network. */
+@font-face { font-family: "Montserrat"; font-style: normal; font-weight: 400; font-display: block; src: url("vendor/montserrat-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Montserrat"; font-style: normal; font-weight: 500; font-display: block; src: url("vendor/montserrat-latin-500.woff2") format("woff2"); }
+@font-face { font-family: "Montserrat"; font-style: normal; font-weight: 600; font-display: block; src: url("vendor/montserrat-latin-600.woff2") format("woff2"); }
+@font-face { font-family: "Montserrat"; font-style: normal; font-weight: 700; font-display: block; src: url("vendor/montserrat-latin-700.woff2") format("woff2"); }
+@font-face { font-family: "Montserrat"; font-style: normal; font-weight: 800; font-display: block; src: url("vendor/montserrat-latin-800.woff2") format("woff2"); }
+@font-face { font-family: "Anton"; font-style: normal; font-weight: 400; font-display: block; src: url("vendor/anton-latin-400.woff2") format("woff2"); }
+
+/* ------------------------------------------------------------------ shell */
+.bn {
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Montserrat", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 500;
+  isolation: isolate;
+  user-select: none;
+}
+.bn * { box-sizing: border-box; margin: 0; }
+.bn__layer { position: absolute; inset: 0; }
+
+/* ------------------------------------------------------------------ background
+ * The brief's effect, exactly: a hard 50/50 split of two colours, thrown to twice the
+ * canvas width, sliding -25% -> +25% on an alternate ease. Three of them at different
+ * speeds and directions never settle, which is what makes the banner feel alive even
+ * while the copy is still.
+ *
+ * Each sheet's duration divides half the loop, so the composite is identical at t=0 and
+ * t=LOOP and the export can loop without a jump.
+ */
+.bn__bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.bn__bgBase { position: absolute; inset: 0; }
+
+.bn__slide {
+  position: absolute;
+  top: 0; bottom: 0; left: -50%; right: -50%;
+  background-image: linear-gradient(var(--ang, -60deg), var(--a) 50%, var(--b) 50%);
+  opacity: var(--op, .5);
+  animation: kkSlide var(--dur, 3s) ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes kkSlide {
+  0%   { transform: translateX(-25%); }
+  100% { transform: translateX(25%); }
+}
+
+.bn__slide--stripes {
+  background-image:
+    repeating-linear-gradient(var(--ang), var(--a) 0 calc(var(--u) * 2.2), transparent calc(var(--u) * 2.2) calc(var(--u) * 4.4)),
+    linear-gradient(var(--ang), var(--a) 50%, var(--b) 50%);
+}
+.bn__slide--dots {
+  background-image:
+    radial-gradient(circle, var(--a) 0 calc(var(--u) * 1.05), transparent calc(var(--u) * 1.05)),
+    linear-gradient(var(--ang), var(--a) 50%, var(--b) 50%);
+  background-size: calc(var(--u) * 8) calc(var(--u) * 8), 100% 100%;
+}
+.bn__slide--rays {
+  background-image:
+    repeating-conic-gradient(from 0deg at 50% 50%, var(--a) 0 5deg, transparent 5deg 15deg),
+    linear-gradient(var(--ang), var(--a) 50%, var(--b) 50%);
+}
+.bn__slide--mesh {
+  background-image:
+    radial-gradient(ellipse 60% 60% at 28% 30%, var(--a) 0%, transparent 62%),
+    radial-gradient(ellipse 55% 55% at 74% 68%, var(--b) 0%, transparent 60%),
+    linear-gradient(var(--ang), var(--a) 50%, var(--b) 50%);
+}
+
+/* a soft vignette so type and product keep their edge over a busy background */
+.bn__vignette {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 48%, transparent 46%, rgba(0, 0, 0, .34) 100%);
+}
+.bn--light .bn__vignette {
+  background: radial-gradient(ellipse at 50% 48%, transparent 46%, rgba(29, 35, 26, .22) 100%);
+}
+
+/* ------------------------------------------------------------------ decorations */
+.bn__decor { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.bn__decor > * { position: absolute; }
+.bn__decor svg { width: 100%; height: 100%; display: block; }
+
+.bn__splash { border-radius: 50% 42% 55% 45% / 48% 52% 44% 56%; background: var(--accent); opacity: .82; }
+.bn__ring { border-radius: 50%; border: calc(var(--u) * .7) solid var(--accent); }
+.bn__ring--dashed { border-style: dashed; }
+.bn__dot { border-radius: 50%; background: var(--accent2); }
+.bn__star { background: var(--accent2); clip-path: polygon(50% 0%, 60% 38%, 100% 50%, 60% 62%, 50% 100%, 40% 62%, 0% 50%, 40% 38%); }
+.bn__streak { background: var(--accent); border-radius: calc(var(--u) * 1); transform: rotate(-24deg); }
+.bn__bubble { border-radius: 50%; border: calc(var(--u) * .35) solid color-mix(in srgb, var(--accent) 62%, transparent); }
+.bn__doodle { border-radius: 50%; border: calc(var(--u) * .5) solid var(--accent); opacity: .55; }
+.bn__flame { background: linear-gradient(0deg, var(--accent) 0%, var(--accent2) 100%);
+  clip-path: polygon(50% 0%, 68% 30%, 82% 18%, 88% 52%, 100% 66%, 78% 100%, 22% 100%, 0% 66%, 12% 52%, 18% 18%, 32% 30%); }
+
+/* ------------------------------------------------------------------ product media */
+.bn__media { position: absolute; z-index: 3; display: flex; align-items: center; justify-content: center; }
+.bn__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* cutoutFloat — the photo floats free, so it must already have alpha */
+.bn--prod-cutoutFloat .bn__img {
+  object-fit: contain;
+  filter: drop-shadow(0 calc(var(--u) * 1.6) calc(var(--u) * 2.2) rgba(0, 0, 0, .42));
+}
+.bn--prod-framed .bn__media { background: var(--panel); border-radius: calc(var(--u) * 1.2); overflow: hidden;
+  box-shadow: 0 calc(var(--u) * 2.2) calc(var(--u) * 4.2) rgba(0, 0, 0, .42);
+  /* ink is light on a dark palette and dark on a light one, so one rule frames both */
+  border: calc(var(--u) * .5) solid color-mix(in srgb, var(--ink) 60%, transparent); }
+.bn--prod-circleMask .bn__media { border-radius: 50%; overflow: hidden; border: calc(var(--u) * 1.1) solid var(--accent);
+  box-shadow: 0 calc(var(--u) * 1.8) calc(var(--u) * 3.6) rgba(0, 0, 0, .38); }
+.bn--prod-tiltedCard .bn__media { background: var(--panel); overflow: hidden; border-radius: calc(var(--u) * 1.2);
+  transform: rotate(-3.4deg); box-shadow: calc(var(--u) * 1.4) calc(var(--u) * 1.8) 0 var(--accent); }
+.bn--prod-bottomCrop .bn__media { overflow: hidden; }
+.bn--prod-bottomCrop .bn__img { object-fit: cover; object-position: 50% 32%; }
+.bn--prod-polaroid .bn__media { background: #FFFFFF; padding: calc(var(--u) * 1.1) calc(var(--u) * 1.1) calc(var(--u) * 4.2);
+  transform: rotate(2.6deg); box-shadow: 0 calc(var(--u) * 2) calc(var(--u) * 3.6) rgba(0, 0, 0, .4); }
+.bn--prod-polaroid .bn__img { border-radius: calc(var(--u) * .2); }
+.bn--prod-arch .bn__media { overflow: hidden; border-radius: 50% 50% calc(var(--u) * 1.4) calc(var(--u) * 1.4) / 42% 42% calc(var(--u) * 1.4) calc(var(--u) * 1.4); }
+
+/* ------------------------------------------------------------------ copy panel
+ * The one rule that makes a moving background safe. 94% opaque is enough to hold 4.5:1 for
+ * every text colour in every palette while the colour behind it is still faintly visible
+ * and moving.
+ */
+.bn__copy {
+  position: absolute; z-index: 4;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: calc(var(--u) * 1.2);
+  max-width: 100%;
+  /* the ceiling fitCopy shrinks against; layouts that share the canvas lower it */
+  max-height: 84%;
+  padding: calc(var(--u) * 3.2) calc(var(--u) * 3.4);
+  /* fully opaque, on purpose. Any show-through makes the panel's contrast a function of
+     whatever photo is behind it, and over a high-contrast food shot it reads as a smudge
+     rather than as depth. The panel is the one surface the whole colour system rests on. */
+  background: var(--panel);
+  border-radius: calc(var(--u) * 1.6);
+  box-shadow: 0 calc(var(--u) * 2.4) calc(var(--u) * 5) rgba(0, 0, 0, .30);
+}
+.bn__kicker, .bn__headline, .bn__sub, .bn__cta { position: relative; }
+.bn__headline {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: .94;
+  letter-spacing: -.022em;
+  font-size: calc(var(--u) * var(--hl, 6));
+  display: flex; flex-direction: column; align-items: flex-start;
+}
+.bn__line { display: block; white-space: nowrap; }
+.bn__kicker {
+  font-weight: 800; text-transform: uppercase; letter-spacing: .24em;
+  font-size: calc(var(--u) * var(--kick, 1.7));
+  color: var(--accent);
+}
+.bn__sub {
+  font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+  font-size: calc(var(--u) * 1.9);
+  color: var(--accent);
+}
+.bn__cta {
+  font-weight: 800; text-transform: uppercase; letter-spacing: .12em;
+  font-size: calc(var(--u) * 1.8);
+}
+
+/* ---- type treatments ---- */
+.bn--type-whiteCaps { --hl: 6.4; }
+.bn--type-whiteCaps .bn__headline { color: var(--ink); }
+
+.bn--type-twoTone { --hl: 6.6; }
+.bn--type-twoTone .bn__line:nth-child(2n) { color: var(--accent); }
+.bn--type-twoTone .bn__line:nth-child(2n+1) { color: var(--ink); }
+
+.bn--type-outline { --hl: 6.8; }
+.bn--type-outline .bn__headline { color: transparent; -webkit-text-stroke: calc(var(--u) * .24) var(--ink); }
+.bn--type-outline .bn__line:nth-child(2n) { color: var(--accent); -webkit-text-stroke: 0; }
+
+.bn--type-ribbonKicker .bn__kicker {
+  background: var(--accent); color: var(--on-accent);
+  padding: calc(var(--u) * .5) calc(var(--u) * 1.4);
+  transform: rotate(-1.6deg);
+  letter-spacing: .18em;
+}
+
+.bn--type-boxed { --hl: 5.4; }
+.bn--type-boxed .bn__headline { background: var(--accent); color: var(--on-accent);
+  padding: calc(var(--u) * .8) calc(var(--u) * 1.5); width: fit-content; max-width: 100%; }
+
+.bn--type-mixedBox { --hl: 6.2; }
+.bn--type-mixedBox .bn__line:nth-child(2n) { background: var(--accent); color: var(--on-accent); padding: 0 calc(var(--u) * .7); align-self: flex-start; }
+
+.bn--type-stacked { --hl: 8.2; }
+.bn--type-stacked .bn__headline { letter-spacing: -.045em; line-height: .88; }
+
+.bn--type-shadowPop { --hl: 6.2; }
+/* the shadow is accent2, not accent: on the palettes where accent and ink are the same
+   colour a same-colour shadow just thickens the letterform instead of offsetting it */
+.bn--type-shadowPop .bn__headline { color: var(--ink); text-shadow: calc(var(--u) * .34) calc(var(--u) * .34) 0 var(--accent2); }
+
+.bn--type-editorial { --hl: 5.6; }
+.bn--type-editorial .bn__headline { font-family: "Anton", "Montserrat", sans-serif; font-weight: 400; letter-spacing: .005em; line-height: .98; }
+.bn--type-editorial .bn__kicker { letter-spacing: .3em; }
+
+.bn--type-ticket { --hl: 5.6; }
+.bn--type-ticket .bn__headline { color: var(--ink); }
+.bn--type-ticket .bn__line { background: var(--ink); color: var(--panel); padding: 0 calc(var(--u) * .8); margin-bottom: calc(var(--u) * .4); }
+.bn--type-ticket .bn__line:nth-child(2n) { background: var(--accent); color: var(--on-accent); }
+
+.bn--type-ribbonKicker .bn__kicker { color: var(--on-accent); }
+.bn--type-mixedBox .bn__kicker { color: var(--accent); }
+.bn--type-boxed .bn__sub, .bn--type-ticket .bn__sub { color: var(--ink); }
+.bn--type-shadowPop .bn__sub { color: var(--ink); }
+.bn--type-editorial .bn__sub { color: var(--muted); }
+
+/* ---- CTAs ---- */
+.bn--cta-pill .bn__cta { background: var(--accent); color: var(--on-accent); border-radius: 999px;
+  padding: calc(var(--u) * 1) calc(var(--u) * 2.6); }
+.bn--cta-ribbon .bn__cta { background: var(--accent); color: var(--on-accent);
+  padding: calc(var(--u) * .9) calc(var(--u) * 3) calc(var(--u) * .9) calc(var(--u) * 1.9);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--u) * 1.6) 50%, 100% 100%, 0 100%); }
+.bn--cta-chipArrow .bn__cta { border: calc(var(--u) * .24) solid var(--ink); color: var(--ink); border-radius: 999px;
+  padding: calc(var(--u) * .9) calc(var(--u) * 1.8); }
+.bn--cta-chipArrow .bn__cta::after { content: " →"; }
+.bn--cta-boxed .bn__cta { background: var(--ink); color: var(--panel); padding: calc(var(--u) * 1) calc(var(--u) * 2.4); }
+.bn--cta-underline .bn__cta { color: var(--ink); border-bottom: calc(var(--u) * .32) solid var(--accent);
+  padding-bottom: calc(var(--u) * .4); }
+.bn--cta-badgeSquare .bn__cta { background: var(--accent); color: var(--on-accent);
+  padding: calc(var(--u) * 1) calc(var(--u) * 2); border-radius: calc(var(--u) * .5); }
+.bn--cta-none .bn__cta { display: none; }
+
+/* ------------------------------------------------------------------ badge
+ * The badge sits outside the copy panel, over the sliding background, so every badge paints
+ * its own opaque fill and picks its own text colour against that fill.
+ */
+.bn__badge {
+  position: absolute; z-index: 6; top: calc(var(--u) * 4); right: calc(var(--u) * 4);
+  display: grid; place-items: center; text-align: center;
+  font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
+  font-size: calc(var(--u) * 1.5); line-height: 1.15;
+  filter: drop-shadow(0 calc(var(--u) * 1) calc(var(--u) * 2) rgba(0, 0, 0, .34));
+}
+.bn--badge-starburst .bn__badge {
+  width: calc(var(--u) * 16); height: calc(var(--u) * 16);
+  background: var(--accent); color: var(--on-accent); padding: 0; --fit: .46;
+  clip-path: polygon(50% 0%, 60% 36%, 93% 7%, 74% 40%, 100% 50%, 74% 60%, 93% 93%, 60% 64%,
+                     50% 100%, 40% 64%, 7% 93%, 26% 60%, 0% 50%, 26% 40%, 7% 7%, 40% 36%);
+}
+.bn--badge-circle .bn__badge { width: calc(var(--u) * 12); height: calc(var(--u) * 12); border-radius: 50%;
+  background: var(--accent); color: var(--on-accent); padding: calc(var(--u) * 1); --fit: .86; }
+.bn--badge-ribbon .bn__badge { background: var(--accent); color: var(--on-accent);
+  padding: calc(var(--u) * 1) calc(var(--u) * 2.2); transform: rotate(-2.2deg);
+  clip-path: polygon(0 0, 100% 0, 96% 100%, 4% 100%); }
+.bn--badge-pill .bn__badge { background: var(--panel); color: var(--ink); border-radius: 999px;
+  padding: calc(var(--u) * 1) calc(var(--u) * 2.4); border: calc(var(--u) * .24) solid var(--accent); }
+.bn--badge-corner .bn__badge { top: 0; right: 0; background: var(--accent); color: var(--on-accent);
+  padding: calc(var(--u) * 1.4) calc(var(--u) * 2.8); border-radius: 0 0 0 calc(var(--u) * 2.2); }
+.bn--badge-seal .bn__badge { width: calc(var(--u) * 14); height: calc(var(--u) * 14); border-radius: 50%;
+  border: calc(var(--u) * .38) dashed var(--accent);
+  background: var(--panel); color: var(--ink); padding: calc(var(--u) * 1.2); --fit: .82; }
+.bn--badge-none .bn__badge { display: none; }
+
+/* ------------------------------------------------------------------ layouts */
+.bn--lay-productLeft .bn__media { left: 0; top: 5%; width: 48%; height: 90%; }
+.bn--lay-productLeft .bn__copy { left: 52%; right: 4%; top: 50%; translate: 0 -50%; }
+
+.bn--lay-productRight .bn__media { right: 0; top: 5%; width: 48%; height: 90%; }
+.bn--lay-productRight .bn__copy { left: 4%; right: 52%; top: 50%; translate: 0 -50%; }
+
+.bn--lay-centerStack .bn__media { left: 27%; top: 2%; width: 46%; height: 44%; }
+.bn--lay-centerStack .bn__copy { left: 12%; right: 12%; bottom: 5%; align-items: center; text-align: center;
+  /* the photo occupies the top 46%, so the panel may never grow into it */
+  max-height: 47%; }
+.bn--lay-centerStack .bn__headline { align-items: center; }
+
+.bn--lay-productBehind .bn__media { right: -2%; top: -4%; width: 62%; height: 108%; }
+.bn--lay-productBehind .bn__copy { left: 4%; bottom: 8%; right: 54%; max-height: 72%; }
+
+.bn--lay-bottomBand .bn__media { right: 0; top: 0; width: 48%; height: 100%; }
+.bn--lay-bottomBand .bn__copy { left: 4%; right: 52%; top: 50%; translate: 0 -50%; }
+
+.bn--lay-diagonalSplit .bn__media { right: 3%; top: 6%; width: 45%; height: 88%; }
+.bn--lay-diagonalSplit .bn__copy { left: 4%; right: 52%; top: 50%; translate: 0 -50%; }
+
+/* `translate`, not `transform: translateY(-50%)`: a transform here would outrank the product's
+   own `transform: rotate(...)` (same specificity, later in the file) and silently un-rotate
+   polaroid and tiltedCard. The standalone property composes with `transform` instead. */
+.bn--lay-circleMask .bn__media { right: 4%; top: 50%; width: 43%; aspect-ratio: 1; translate: 0 -50%; }
+.bn--lay-circleMask .bn__copy { left: 4%; right: 52%; top: 50%; translate: 0 -50%; }
+
+.bn--lay-fullBleed .bn__media { inset: 0; width: 100%; height: 100%; }
+.bn--lay-fullBleed .bn__copy { left: 5%; right: 34%; bottom: 6%; align-items: flex-start; max-height: 76%; }
+
+.bn--lay-cornerScrim .bn__media { inset: 0; width: 100%; height: 100%; }
+.bn--lay-cornerScrim .bn__copy { left: 5%; top: 7%; right: 46%; border-left: calc(var(--u) * .7) solid var(--accent); }
+
+.bn--lay-topBanner .bn__media { right: 0; top: 0; width: 40%; height: 100%; }
+.bn--lay-topBanner .bn__copy { left: 4%; right: 42%; top: 50%; translate: 0 -50%; }
+
+/* every layout puts the badge in the corner the copy is not in */
+.bn--lay-productLeft .bn__badge, .bn--lay-productBehind .bn__badge,
+.bn--lay-bottomBand .bn__badge, .bn--lay-diagonalSplit .bn__badge,
+.bn--lay-circleMask .bn__badge, .bn--lay-fullBleed .bn__badge {
+  top: calc(var(--u) * 4); right: calc(var(--u) * 4);
+}
+.bn--lay-productRight .bn__badge, .bn--lay-centerStack .bn__badge {
+  top: calc(var(--u) * 4); left: calc(var(--u) * 4); right: auto;
+}
+.bn--lay-cornerScrim .bn__badge { top: auto; bottom: calc(var(--u) * 5); right: calc(var(--u) * 5); }
+.bn--lay-topBanner .bn__badge { top: calc(var(--u) * 3); right: calc(var(--u) * 3); }
+
+/* ------------------------------------------------------------------ safe area */
+.bn__safe { position: absolute; inset: 5%; z-index: 20; pointer-events: none; outline: calc(var(--u) * .18) dashed color-mix(in srgb, var(--accent) 70%, transparent); display: none; }
+.bn--show-safe .bn__safe { display: block; }
+.bn--show-safe .bn__grid { position: absolute; inset: 0; z-index: 20; pointer-events: none;
+  background-image: linear-gradient(color-mix(in srgb, var(--accent) 30%, transparent) 1px, transparent 1px),
+                    linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent) 1px, transparent 1px);
+  background-size: 10% 10%; }
+
+/* ------------------------------------------------------------------ feedback overlay */
+.bn__flags { position: absolute; z-index: 30; right: calc(var(--u) * 1.4); bottom: calc(var(--u) * 1.4); display: flex; gap: calc(var(--u) * .6); }
+.bn__flag { font-size: calc(var(--u) * 1.2); font-weight: 800; padding: calc(var(--u) * .3) calc(var(--u) * .8); border-radius: calc(var(--u) * .4); }
+.bn__flag--bad { background: #C81E1E; color: #FFF; }
+.bn__flag--warn { background: #B45309; color: #FFF; }

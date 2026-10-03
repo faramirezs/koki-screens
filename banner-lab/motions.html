@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="lab.css">
+<style>#stage{position:fixed;left:-99999px;top:0}</style></head>
+<body>
+<div id="stage"></div>
+<script src="vendor/gsap.min.js"></script>
+<script type="module">
+/*
+ * motions.html — proves every motion loops without a visible jump.
+ *
+ * The timeline plays forward once per loop (it is NOT a yoyo). The exit throws each element
+ * off the canvas the other way from the entrance, so the state at t=LOOP is deliberately not
+ * bit-identical to the state at t=0. What has to hold is the thing a viewer actually sees:
+ * every element is either in the same pose at both ends, or invisible at both ends. An
+ * element that is visible at one end and gone at the other is a jump, and that is the failure
+ * this reports.
+ */
+import { renderBanner, buildMotion, settle, LOOP } from "./lab.js";
+
+const all = await fetch("banners.json").then((r) => r.json());
+const stage = document.getElementById("stage");
+
+let names = [];
+
+/** A clip-path that leaves no area paints nothing, so the element is invisible at that end. */
+function clippedAway(clip) {
+  const m = /inset\(([^)]+)\)/.exec(clip || "");
+  if (!m) return false;
+  const parts = m[1].trim().split(/\s+/).map((v) => parseFloat(v) || 0);
+  const [top, right = top, bottom = top, left = right] = parts;
+  return top + bottom >= 99.5 || left + right >= 99.5;
+}
+/** Every property the timeline can touch, plus the one that decides visibility. */
+function snapshot(bn) {
+  names = [...bn.querySelectorAll("*")].map((n) => n.className || n.tagName);
+  return [...bn.querySelectorAll("*")].map((n) => {
+    const cs = getComputedStyle(n);
+    return {
+      key: [cs.transform, cs.clipPath, cs.filter, cs.width, cs.height].join("|"),
+      opacity: Number(cs.opacity),
+      clip: clippedAway(cs.clipPath),
+    };
+  });
+}
+
+const lines = [];
+let failures = 0;
+const seen = new Set();
+window.__progress = 0;
+
+for (const b of all) {
+  if (seen.has(b.motion)) continue;
+  seen.add(b.motion);
+  window.__progress = seen.size;
+  await new Promise((r) => setTimeout(r, 0));
+
+  const bn = renderBanner(b);
+  stage.appendChild(bn);
+  await Promise.all([...bn.querySelectorAll(".bn__img")].map((i) => i.decode().catch(() => {})));
+  await settle(bn);
+
+  let tl;
+  try {
+    tl = buildMotion(bn, b);
+  } catch (e) {
+    lines.push(`FAIL ${b.motion}: threw ${e}`);
+    failures++;
+    bn.remove();
+    continue;
+  }
+
+  tl.pause();
+  tl.seek(0);
+  const start = snapshot(bn);
+  tl.seek(LOOP - 0.001); // just before the wrap, so the exit tween is effectively finished
+  const end = snapshot(bn);
+
+  // seek() on an infinitely repeating timeline wraps modulo the duration, so seeking to LOOP
+  // would land back on frame zero and the check would pass by construction. Stay 1ms short.
+  const jumps = [];
+  for (let i = 0; i < start.length; i++) {
+    const a = start[i], z = end[i];
+    const goneA = a.opacity < 0.02 || a.clip;
+    const goneZ = z.opacity < 0.02 || z.clip;
+    if (goneA && goneZ) continue; // invisible at both ends: nothing for the viewer to see jump
+    if (a.key !== z.key || Math.abs(a.opacity - z.opacity) > 0.02) jumps.push(i);
+  }
+
+  const slides = bn.querySelectorAll(".bn__slide");
+  const bgOk = slides.length > 0 && [...slides].every((s) => {
+    const cs = getComputedStyle(s);
+    return cs.animationName === "kkSlide" && parseFloat(cs.animationDuration) > 0;
+  });
+
+  if (!bgOk) {
+    lines.push(`FAIL ${b.motion}: background layers are not animating`);
+    failures++;
+  } else if (jumps.length) {
+    const detail = jumps.slice(0, 3).map((i) => `${names[i]}\n   start ${start[i].key} op=${start[i].opacity}\n   end   ${end[i].key} op=${end[i].opacity}`).join("\n");
+    lines.push(`FAIL ${b.motion}: ${jumps.length}/${start.length} elements jump at the loop seam\n${detail}`);
+    failures++;
+  } else {
+    lines.push(`ok   ${b.motion.padEnd(20)} ${LOOP}s loop  ${start.length} elements  ${slides.length} bg layers  seam clean`);
+  }
+  bn.remove();
+}
+
+window.__report = { text: lines.join("\n") + `\n\n${seen.size} motions, ${failures} failures`, failures };
+window.__ready = true;
+</script>
+<script>
+window.addEventListener("error", (e) => {
+  window.__report = { text: `page error: ${e.message} @ ${e.filename}:${e.lineno}\nprogress ${window.__progress}`, failures: 1 };
+  window.__ready = true;
+});
+</script></body></html>

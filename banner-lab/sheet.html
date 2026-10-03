@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Banner sheet</title>
+<link rel="stylesheet" href="lab.css">
+<style>
+  body { margin: 0; background: #0b0d10; }
+  .sheet { display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr); gap: 8px; padding: 8px; }
+  .cell { position: relative; aspect-ratio: 16/9; overflow: hidden; background: #000; }
+  .cell__in { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  /* the tag sits in the cell's own strip below the banner, never over it: a review overlay
+     that hides the bottom 5% of the artwork is hiding the part being reviewed */
+  .cell__tag {
+    position: absolute; left: 0; bottom: 0; z-index: 50;
+    background: #000c; color: #9ecbff; font: 600 11px/1.45 ui-monospace, monospace;
+    padding: 2px 5px; max-width: 100%;
+  }
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet"></div>
+<script src="vendor/gsap.min.js"></script>
+<script>
+// a module that fails to load or throws never reaches its own handler, so this must be classic
+window.addEventListener("error", (e) => {
+  window.__error = `${e.message} @ ${e.filename || "?"}:${e.lineno || 0}`;
+});
+window.addEventListener("unhandledrejection", (e) => { window.__error = `rejected: ${e.reason}`; });
+</script>
+<script type="module">
+import { renderBanner, buildMotion, settle } from "./lab.js";
+
+const params = new URLSearchParams(location.search);
+const cols = Number(params.get("cols") || 4);
+const from = Number(params.get("from") || 0);
+const to = Number(params.get("to") || 24);
+const freeze = params.get("freeze");
+const axis = params.get("axis");
+const value = params.get("value");
+const hideFlags = params.get("hideflags") === "1";
+
+const all = await fetch("banners.json").then((r) => r.json());
+const ids = (params.get("ids") || "").split(",").map((x) => x.trim()).filter(Boolean);
+let list = all.slice(from, to);
+if (ids.length) list = ids.map((id) => all.find((b) => b.id === id)).filter(Boolean);
+else if (axis && value) list = all.filter((b) => String(b[axis] === undefined ? b.copy.key : b[axis]) === value);
+
+document.documentElement.style.setProperty("--cols", cols);
+const sheet = document.getElementById("sheet");
+const timelines = [];
+const cells = [];
+
+for (const b of list) {
+  const cell = document.createElement("div");
+  cell.className = "cell";
+  const inner = document.createElement("div");
+  inner.className = "cell__in";
+  const bn = renderBanner(b);
+  inner.appendChild(bn);
+  cell.appendChild(inner);
+  const tag = document.createElement("div");
+  tag.className = "cell__tag";
+  tag.textContent = `${b.id} · ${b.paletteName} · ${b.layout} · ${b.bg} · ${b.type} · ${b.badge} · ${b.cta} · ${b.product} · ${b.decor} · ${b.motion} · ${b.copy.key}`;
+  cell.appendChild(tag);
+  sheet.appendChild(cell);
+
+  const scale = (window.innerWidth / cols - 8) / b.width;
+  inner.style.transform = `scale(${scale})`;
+  // the cell is the scaled banner plus a strip for the tag, so the tag never covers artwork
+  cell.style.height = `${Math.round(b.height * scale) + 38}px`;
+  cells.push([bn, b]);
+}
+
+// Photos, fonts and the fit pass all change the layout the motion measures off, so settle
+// everything first and only then build the timelines.
+await Promise.all([...document.querySelectorAll(".bn__img")].map((i) => i.decode().catch(() => {})));
+for (const [bn] of cells) await settle(bn);
+for (const [bn, b] of cells) timelines.push(buildMotion(bn, b));
+for (const tl of timelines) {
+  tl.pause();
+  tl.seek(Number(freeze || 6));
+}
+window.__ready = true;
+</script>
+</body>
+</html>
