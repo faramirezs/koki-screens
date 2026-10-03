@@ -9,7 +9,7 @@ window.addEventListener("error", (e) => { window.__error = `${e.message} @ ${e.f
 window.addEventListener("unhandledrejection", (e) => { window.__error = `rejected: ${e.reason}`; });
 </script>
 <script type="module">
-import { renderBanner, buildMotion, settle } from "./lab.js";
+import { renderBanner, animate, settle } from "./lab.js";
 const id = new URLSearchParams(location.search).get("id") || "b0001";
 const all = await fetch("banners.json").then((r) => r.json());
 const spec = all.find((b) => b.id === id) || all[0];
@@ -17,7 +17,8 @@ const bn = renderBanner(spec);
 document.body.appendChild(bn);
 await Promise.all([...document.querySelectorAll(".bn__img")].map((i) => i.decode().catch(() => {})));
 await settle(bn);
-const tl = buildMotion(bn, spec);
-tl.pause(); tl.seek(Number(new URLSearchParams(location.search).get("t") || 6));
+const tl = animate(bn, spec);
+// a Mode with no Timeline is already settled, and freezing the background holds the sheets
+if (tl) { tl.pause(); tl.seek(Number(new URLSearchParams(location.search).get("t") || 6)); }
 window.__ready = true;
 </script></body></html>

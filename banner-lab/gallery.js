@@ -7,8 +7,8 @@
  * A verdict is posted with the banner's full axis vector, never just the id: that is what
  * makes "which combination is good" answerable instead of a memory test.
  */
-import { renderBanner, buildMotion, measure, settle } from "./lab.js";
-import { AXES } from "./space.mjs";
+import { renderBanner, animate, measure, settle } from "./lab.js";
+import { AXES, MODES, MODE_NAMES, variesIn } from "./space.mjs";
 
 const VERDICTS = [
   { key: "love", label: "🔥", title: "love it" },
@@ -21,6 +21,7 @@ const state = {
   banners: [],
   feedback: new Map(), // id -> verdict
   filters: {},
+  mode: MODE_NAMES[0], // the workflow starts at composition and works up to the whole scene
   onlyFlagged: false,
   hideRejected: false,
   paused: false,
@@ -46,22 +47,71 @@ async function boot() {
     }
   } catch { /* no feedback yet */ }
 
+  buildModes();
   buildFilters();
   buildGrid();
+  $("#modes").addEventListener("click", (e) => {
+    const btn = e.target.closest(".mode");
+    if (btn) setMode(btn.dataset.mode);
+  });
   $("#legend").textContent =
     "Each card shows its full axis vector. Vote on any you have an opinion about; " +
-    "the votes are written to feedback.jsonl with the axes, so the next wave can be biased toward what works.";
+    "the votes are written to feedback.jsonl with the axes and the mode, so the next wave can be biased toward what works.";
 }
 
+// ------------------------------------------------------------------ modes
+
+/**
+ * The mode bar: the question each Mode asks, in workflow order.
+ *
+ * The mode is not a view setting, it is the experiment. A vote cast in `composition` and a vote
+ * cast in `motion` are answers to different questions, so the mode travels with the vote and the
+ * analysis keeps the two apart.
+ */
+function buildModes() {
+  const wrap = $("#modes");
+  wrap.innerHTML = MODE_NAMES.map((m, i) => {
+    const n = state.banners.filter((b) => b.mode === m).length;
+    return `<button class="mode" data-mode="${m}">
+      <b>${i + 1}. ${MODES[m].label}</b>
+      <span>${MODES[m].question}</span>
+      <em>${n} banners &middot; varies ${variesIn(m).size} of ${AXES.length} axes</em>
+    </button>`;
+  }).join("");
+  for (const btn of wrap.querySelectorAll(".mode")) btn.classList.toggle("on", btn.dataset.mode === state.mode);
+}
+
+function setMode(mode) {
+  if (!MODES[mode] || mode === state.mode) return;
+  state.mode = mode;
+  state.filters = {};
+  state.limit = 120;
+  buildModes();
+  buildFilters();
+  buildGrid();
+}
+
+/**
+ * The axis vector of a Banner, as shown on the card and recorded with every vote.
+ *
+ * Derived from AXES rather than hand-listed. A hand-written copy of this list here silently
+ * dropped `bgEnergy` and `roleMotion` from every card and every vote the moment those axes were
+ * added, and nothing failed - the card just printed "undefined" and the vote stored a vector
+ * that was missing two fields. There is one list, and this reads it.
+ */
 function axesOf(b) {
-  return { paletteName: b.paletteName, layout: b.layout, bg: b.bg, type: b.type, badge: b.badge, cta: b.cta, product: b.product, decor: b.decor, motion: b.motion, copy: b.copy.key, photo: b.photo };
+  return Object.fromEntries(AXES.map((k) => [k, k === "copy" ? b.copy.key : b[k]]));
 }
 
 // ------------------------------------------------------------------ filters
 
 function buildFilters() {
   const wrap = $("#filters");
-  for (const axis of AXES) {
+  wrap.textContent = "";
+  // Only the axes this Mode varies. A filter for an axis the Mode holds still could never do
+  // anything - every banner in the deck has the same value for it - and offering it would
+  // suggest a variable that is not being tested.
+  for (const axis of AXES.filter((a) => variesIn(state.mode).has(a))) {
     const values = [...new Set(state.banners.map((b) => axesOf(b)[axis]))].sort();
     const sel = document.createElement("select");
     sel.dataset.axis = axis;
@@ -77,6 +127,7 @@ function buildFilters() {
 // ------------------------------------------------------------------ grid
 
 function visible(b) {
+  if (b.mode !== state.mode) return false;
   const a = axesOf(b);
   for (const [axis, v] of Object.entries(state.filters)) if (v && a[axis] !== v) return false;
   if (state.hideRejected && state.feedback.get(b.id) === "no") return false;
@@ -107,7 +158,7 @@ function ordered() {
 let observer;
 
 function buildGrid() {
-  for (const { tl } of state.live.values()) tl.kill();
+  for (const { tl } of state.live.values()) tl?.kill();
   state.live.clear();
   if (observer) observer.disconnect();
 
@@ -209,15 +260,21 @@ function mount(shell, b) {
 
   // everything below reads geometry, so wait for the webfont and the fit pass that depends on it
   settle(bn).then(() => {
-    if (!shell.isConnected) return;
+    // Switching Mode rebuilds the grid, so this card may have been unmounted and re-mounted
+    // while the fit pass was still running. Registering the timeline then would animate a banner
+    // that is no longer in the DOM and leave the card that IS in the DOM with no timeline at all,
+    // stuck at its settled pose. Check that this mount is still the one on screen.
+    if (!shell.isConnected || stage.firstElementChild !== inner || state.live.has(b.id)) return;
     const flags = measure(bn);
     KNOWN.set(b, flags);
     const idRow = shell.querySelector(".card__id");
     idRow.innerHTML = `<code>${b.id}</code>` + flags.map((f) => `<span class="flag flag--${f === "overflow" ? "bad" : "warn"}">${f}</span>`).join("");
     shell.classList.toggle("card--flagged", flags.length > 0);
 
-    const tl = buildMotion(bn, b);
-    if (!state.paused) tl.play();
+    // `animate` returns null for a Mode that has no Timeline: composition and background are
+    // settled stills, and composition also freezes the background sheets.
+    const tl = animate(bn, b);
+    if (tl && !state.paused) tl.play();
     state.live.set(b.id, { tl, bn, shell });
   });
 }
@@ -225,7 +282,7 @@ function mount(shell, b) {
 function unmount(id) {
   const live = state.live.get(id);
   if (!live) return;
-  live.tl.kill();
+  live.tl?.kill();
   live.shell.querySelector(".card__stage").textContent = "";
   state.live.delete(id);
 }
@@ -247,7 +304,7 @@ async function vote(b, verdict, card, btn, comment) {
     await fetch("/feedback", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id: b.id, verdict, comment: comment || undefined, axes: axesOf(b), palette: b.palette, copy: b.copy }),
+      body: JSON.stringify({ id: b.id, mode: b.mode, verdict, comment: comment || undefined, axes: axesOf(b), palette: b.palette, copy: b.copy }),
     });
   } catch (e) {
     console.warn("feedback not saved", e);
@@ -263,7 +320,7 @@ document.addEventListener("change", (e) => {
   if (e.target.id === "sort") { state.sort = e.target.value; state.limit = 120; buildGrid(); }
   if (e.target.id === "pause") {
     state.paused = e.target.checked;
-    for (const { tl } of state.live.values()) (state.paused ? tl.pause() : tl.play());
+    for (const { tl } of state.live.values()) if (tl) state.paused ? tl.pause() : tl.play();
   }
 });
 

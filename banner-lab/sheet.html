@@ -29,7 +29,7 @@ window.addEventListener("error", (e) => {
 window.addEventListener("unhandledrejection", (e) => { window.__error = `rejected: ${e.reason}`; });
 </script>
 <script type="module">
-import { renderBanner, buildMotion, settle } from "./lab.js";
+import { renderBanner, animate, settle } from "./lab.js";
 
 const params = new URLSearchParams(location.search);
 const cols = Number(params.get("cols") || 4);
@@ -76,7 +76,7 @@ for (const b of list) {
 // everything first and only then build the timelines.
 await Promise.all([...document.querySelectorAll(".bn__img")].map((i) => i.decode().catch(() => {})));
 for (const [bn] of cells) await settle(bn);
-for (const [bn, b] of cells) timelines.push(buildMotion(bn, b));
+for (const [bn, b] of cells) { const tl = animate(bn, b); if (tl) timelines.push(tl); }
 for (const tl of timelines) {
   tl.pause();
   tl.seek(Number(freeze || 6));

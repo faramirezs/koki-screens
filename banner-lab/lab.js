@@ -9,7 +9,7 @@
  * with the loop-seam check, which means a banner picked here can be exported to video with
  * the motion it was judged on.
  */
-import { BG_RECIPES, MOTION_SPEC, NEEDS_CUTOUT, PHASES, ROLE_MOTION, BG_ENERGY_CURVES } from "./space.mjs";
+import { BG_RECIPES, MOTION_SPEC, NEEDS_CUTOUT, PHASES, ROLE_MOTION, BG_ENERGY_CURVES, MODES } from "./space.mjs";
 
 
 // --------------------------------------------------------------------------- //
@@ -540,6 +540,34 @@ export function settle(bn) {
   return document.fonts.ready.then(() => new Promise((resolve) => {
     requestAnimationFrame(() => { refit(bn); resolve(bn); });
   }));
+}
+
+/**
+ * Stop the background sheets where they are.
+ *
+ * The sheets are driven by CSS, not by the Timeline, so leaving the Timeline unbuilt is not
+ * enough to hold them still. A settled Composition is a still, so nothing in the frame may move.
+ */
+export function freezeBackground(root) {
+  for (const slide of root.querySelectorAll(".bn__slide")) {
+    for (const a of slide.getAnimations()) a.pause();
+  }
+}
+
+/**
+ * Put a Banner into the state its Mode asks for, and return its Timeline when it has one.
+ *
+ * `composition` and `background` have no Timeline at all. Every Element already sits at its
+ * settled pose in CSS - the Timeline is only ever what moves it away from that pose - so
+ * "show the settled Composition" is not a special case to build, it is the absence of one.
+ */
+export function animate(root, spec) {
+  const mode = MODES[spec.mode] || MODES.scene;
+  if (!mode.animated) {
+    if (mode.background === "frozen") freezeBackground(root);
+    return null;
+  }
+  return buildMotion(root, spec);
 }
 
 export function measure(bn) {

@@ -242,3 +242,81 @@ export const AXES = [
   "paletteName", "layout", "bg", "bgEnergy", "type", "badge", "cta",
   "product", "decor", "motion", "roleMotion", "copy", "photo",
 ];
+
+/**
+ * The Reference Scene: one axis vector that every Mode holds fixed while it studies something
+ * else. Background and Motion mode can only isolate their own axis if the Composition behind it
+ * does not also change, and the lab has no validated Composition to point at yet (feedback.jsonl
+ * is empty), so the reference is declared rather than derived.
+ *
+ * Re-point it at the winner of Composition mode once that mode has votes. Nothing else changes:
+ * the modes read this object, they do not know which values are in it.
+ */
+export const REFERENCE = {
+  paletteName: "ember",
+  layout: "productRight",
+  bg: "duoSlide",
+  bgEnergy: "swell",
+  type: "whiteCaps",
+  badge: "circle",
+  cta: "pill",
+  product: "cutoutFloat",
+  decor: "sparkles",
+  motion: "slamLeft",
+  roleMotion: "hierarchy",
+  copy: "burger",
+  photo: "cheeseburger-01-nhd6bs5qcgcjpg.jpg",
+};
+
+/**
+ * A Mode is the question a deck asks, expressed as the axes it is allowed to vary. Every axis it
+ * does not vary is pinned to REFERENCE, so two Banners in one deck differ in the axis under study
+ * and in nothing else.
+ *
+ * That is the whole point. The scene deck varies 13 axes at once, and a preference expressed in it
+ * cannot be attributed to any one of them.
+ *
+ *   animated   build the Timeline? false leaves every Element at its settled pose, because the
+ *              Timeline is what moves an Element away from that pose.
+ *   background "frozen" stops the sheets where they are; "live" lets them slide.
+ */
+export const MODES = {
+  composition: {
+    letter: "c",
+    label: "Composition",
+    question: "Does this design work as a still?",
+    varies: ["paletteName", "layout", "type", "badge", "cta", "product", "decor"],
+    animated: false,
+    background: "frozen",
+  },
+  background: {
+    letter: "g",
+    label: "Background",
+    question: "Does the background support the content, or compete with it?",
+    varies: ["bg", "bgEnergy"],
+    animated: false,
+    background: "live",
+  },
+  motion: {
+    letter: "m",
+    label: "Motion",
+    question: "Does the choreography read, and does it suit each Role?",
+    varies: ["motion", "roleMotion"],
+    animated: true,
+    background: "live",
+  },
+  scene: {
+    letter: "s",
+    label: "Scene",
+    question: "Does the whole thing work together?",
+    varies: null, // null = every axis, which is the deck the lab started with
+    animated: true,
+    background: "live",
+  },
+};
+
+/** Mode names in workflow order: composition, then background, then motion, then the whole scene. */
+export const MODE_NAMES = Object.keys(MODES);
+
+/** The set of axes a Mode varies. `null` in MODES means all of them. */
+export const variesIn = (mode) => new Set(MODES[mode]?.varies ?? AXES);

@@ -1,6 +1,6 @@
 # banner-lab v2 — status
 
-**Open the gallery: <http://100.103.106.114:7788/>** (Tailscale). Vote, then
+**Open the gallery: <http://100.103.106.114:7788/>** (Tailscale). Pick a Mode, vote, then
 `node analyze.mjs --min 4 --min-pair 2` and read `report.md`.
 
 Server runs as the supervised proc `labserve` on port 7788. If it is down:
@@ -12,14 +12,44 @@ own, so between elements moving the frame barely changed.
 
 ## What v2 is
 
-960 animated 1920×1080 banners in `banners.json`, sampled from an 11-axis design space. The
-brief was: a high-impact background first, elements that slam in, keep breathing while you
-read, then leave hard. That is now the literal timeline.
+2050 animated 1920×1080 banners in `banners.json`, in four **Modes**. The brief was: a
+high-impact background first, elements that slam in, keep breathing while you read, then leave
+hard. That is now the literal timeline.
 
 ```
-node audit.mjs     ->  960 banners / no defects
-node motions.mjs   ->  18 motions, 0 failures  (every loop seam clean)
+node build.mjs --per-seed 160 --seeds 1,2,3,4,5,6
+  composition  960 banners  varies: paletteName layout type badge cta product decor
+  background    40 banners  varies: bg bgEnergy                 (all 40)
+  motion        90 banners  varies: motion roleMotion           (all 90)
+  scene        960 banners  varies: everything
+node audit.mjs   ->  2050 banners / no defects
+node motions.mjs ->  22 combinations, 0 failures  (every loop seam clean)
+node gtest.mjs   ->  all gallery checks passed
 ```
+
+## Modes
+
+The scene deck varies thirteen axes at once, which finds a Banner you like but cannot tell you
+*why*. A **Mode** is the question a deck asks, expressed as the axes it varies; everything else is
+pinned to the **Reference Scene**, so two Banners in one deck differ in the axis under study and
+nothing else. One renderer serves all four — a Mode decides only whether a Timeline is built and
+whether the background sheets run. See `docs/adr/0003`.
+
+| Mode | Timeline | sheets | foreground | varies |
+|---|---|---|---|---|
+| `composition` | none | held | still | 7 axes |
+| `background` | none | running | still | 2 axes |
+| `motion` | built | running | moving | 2 axes |
+| `scene` | built | running | moving | 13 axes |
+
+Composition mode is a still for free: every Element already sits at its settled pose in CSS and the
+Timeline is only what moves it away, so not building one *is* the settled Composition.
+
+**Votes are never pooled across Modes.** They answer different questions. `report.md` has one
+section per Mode.
+
+**The Reference Scene is a placeholder** — declared in `space.mjs`, not derived, because no Votes
+exist yet. Re-point it at the winner of Composition mode once that Mode has Votes.
 
 ## The loop
 
@@ -154,19 +184,25 @@ file after running it.
   `dodgeCopy`, `offPose`. The only place that touches the DOM.
 - `lab.css` — the design system: `@font-face`, `.bn` shell, `--u` unit, sliding backgrounds,
   decor, product treatments, the copy panel, type, CTAs, badges, layouts.
-- `build.mjs` — multi-seed builder → `banners.json`.
-- `gallery.{html,js,css}` — voting UI: 120-card pages, lazy mount, deterministic shuffle, axis
-  filters, per-card note, motion pause, export.
-- `analyze.mjs` — votes → `report.md`.
+- `build.mjs` — multi-seed, multi-Mode builder → `banners.json`. Prints, per Mode, what it varied
+  and what it held, and flags any axis it claimed to hold that is not in fact constant.
+- `gallery.{html,js,css}` — voting UI: mode bar, 120-card pages, lazy mount, deterministic shuffle,
+  per-Mode axis filters, per-card note, motion pause, export.
+- `analyze.mjs` — votes → `report.md`, one section per Mode, never pooled.
 - `audit.mjs` / `audit.html` — renders every banner off-screen and measures text contrast
   against the surface it is actually painted on, overflow, safe area, copy/media collision and
-  whether the background layers are animating at all.
+  whether the background layers are animating at all. It never builds a Timeline, so it has always
+  measured the settled Composition and needed no change for Modes.
 - `motions.mjs` / `motions.html` — builds one banner per value of every axis that can change
   the motion, and asserts every element is either in the same pose at both ends of the loop or
   invisible at both, and that the background's energy curve closes on itself. Breaking one
   curve's final stop produces exactly the four failures you would expect, so the check has
   teeth.
-- `sheet.html`, `one.html`, `strip.html` — contact sheet, single banner, motion arc.
+- `gtest.mjs` — mounts the gallery, switches Mode, votes, and asserts both the Mode's behaviour
+  (sheets held in `composition`, running in `background`, copy moving in `motion`) and the shape of
+  the Vote that lands in `feedback.jsonl`. Run it as `node gtest.mjs && rm -f feedback.jsonl`.
+- `sheet.html`, `one.html`, `strip.html` — contact sheet, single banner, motion arc. All three go
+  through `animate()`, so a still Mode renders as a still.
 - `shots.mjs`, `singles.mjs` — screenshot harnesses (Puppeteer).
 - `serve.mjs` — static server + `POST /feedback` + `GET /feedback`.
 
@@ -193,8 +229,18 @@ file after running it.
   arbitrary position. That is cosmetically harmless — every frame of a looping background is a
   valid frame — but it means two screenshots of the same banner are not pixel-comparable
   unless the slide animations are paused and seeked too, which `shots.mjs` does not do.
+- **Screenshots on this box are not reproducible at all.** Two captures of a completely static
+  page — one `linear-gradient` div, no animation anywhere — differ across **98.7%** of their
+  pixels (mean 22/255) on this software rasterizer. Frame-to-frame pixel diffs therefore cannot
+  decide whether anything moved, and the Mode behaviour above is asserted from DOM and animation
+  state (`getComputedStyle().transform`, `Animation.playState`) instead, which is deterministic.
+  Any earlier claim resting on a pixel diff should be treated as unsupported.
+- **The Reference Scene is a placeholder.** Background and Motion mode hold it fixed, so their
+  results are only as meaningful as that one composition — and it is declared, not derived,
+  because no Votes exist yet. Re-point `REFERENCE` in `space.mjs` at the winner of Composition
+  mode once that Mode has Votes. Nothing else changes; no Mode knows which values are in it.
 
-## Bugs fixed this round (do not regress)
+## Bugs fixed in the v2 round (do not regress)
 
 1. `getBoundingClientRect()` returns transform-**scaled** px while `getComputedStyle` padding is
    unscaled, so any banner previewed through `transform: scale()` (the sheet *and* the gallery)
@@ -231,3 +277,27 @@ file after running it.
     freeze it, and every contact sheet and motion strip showed whatever energy the wall clock
     happened to be at rather than the energy of the Phase being illustrated. It is now a tween
     on the GSAP timeline, and `motions.mjs` asserts the curve closes on itself.
+
+## Bugs fixed in the Modes round (do not regress)
+
+13. **`gallery.js` kept its own hand-written copy of the axis list.** It was a fourth copy, after
+    `build.mjs`, `gallery.js`'s filters and `analyze.mjs`, and it was the one that mattered: it
+    feeds both the text on every card and the `axes` field of every Vote. When `bgEnergy` and
+    `roleMotion` were added, `AXES` was updated and this list was not, so every card printed
+    `bgEnergy undefined` and every Vote stored a vector missing two fields — and `gtest.mjs`
+    passed the whole time, because it only checked that a Vote had been *written*, never what was
+    in it. `axesOf()` now derives from `AXES`, and `gtest.mjs` asserts that a Vote carries every
+    axis in `AXES`, no extras, and none of them `undefined`. Same class of bug as #11, one layer
+    further out.
+14. **A Mode switch could leave a card with no Timeline.** `mount()` registered its Timeline
+    inside `settle(bn).then(...)`, which resolves a frame later. A grid rebuild in that window
+    unmounted the card, and the pending callback then registered a Timeline animating a banner
+    that was no longer in the DOM — while the card that *was* in the DOM, from the newer mount,
+    was skipped. The guard now checks that this mount is still the one on screen
+    (`stage.firstElementChild === inner`) and that no other mount has already claimed the id.
+15. **Deduplicating across seeds needed the Mode in the key.** Background mode pins eleven of
+    thirteen axes, so its whole space is 40 Banners and each seed re-emitted the same 40 — 240
+    Banners, six copies of each, inflating `n` in the analysis without adding evidence. The key is
+    now `mode | axis vector`: without the Mode, a Composition Banner whose seven varied axes all
+    land on the Reference Scene has the *identical* vector to the Motion Banner for
+    `slamLeft × hierarchy`, and one would have silently suppressed the other.

@@ -39,25 +39,69 @@ so `t=0` and `t=LOOP` are visually identical and the loop closes without a jump.
 | fetch photos | `python3 fetch_photos.py` | `photos2/`, `photos2.json` |
 | photo sheet | `node contact.mjs` | `photos2-sheet.jpg` |
 | cut out subjects | `../screen-ad-generator/.venv/bin/python cutout.py` | `photos2/cut/*.png` |
-| build the deck | `node build.mjs --per-seed 160 --seeds 1,2,3,4,5,6` | `banners.json` (960 specs) |
+| build the deck | `node build.mjs --per-seed 160 --seeds 1,2,3,4,5,6` | `banners.json` (2050 specs, all four Modes) |
 | audit the deck | `node audit.mjs` | contrast / overflow / collide / safe-area counts |
 | check the motion | `node motions.mjs` | loop seam + background energy, one per axis value |
+| check the gallery | `node gtest.mjs && rm -f feedback.jsonl` | mount, Mode switch, Vote shape |
 | screenshot | `node shots.mjs sheet --from 0 --to 12 --cols 3 --freeze 6` | `shots/*.png` |
 | one banner, full size | `node singles.mjs s1-b0002` | `shots/s1-b0002.png` |
 | motion arc | `node shots.mjs strip --id s1-b0001 --n 12 --cols 4` | 12 frames across the loop |
 | serve + collect votes | `node serve.mjs --port 7788` | `feedback.jsonl` |
-| analyse | `node analyze.mjs --min 4 --min-pair 2` | `report.md` |
+| analyse | `node analyze.mjs --min 4 --min-pair 2` | `report.md`, one section per Mode |
+
+## Modes
+
+The scene deck varies thirteen axes at once, which is the right instrument for finding a Banner you
+like and the wrong one for finding out *why*. The deck is therefore split into four **Modes**, each
+of which varies a subset of the axes and pins everything else to the **Reference Scene**:
+
+| Mode | the question | varies | banners |
+|---|---|---|---|
+| `composition` | Does this design work as a still? | 7 axes | 960 |
+| `background` | Does the background support the content, or compete with it? | `bg`, `bgEnergy` | 40 (all of them) |
+| `motion` | Does the choreography read, and does it suit each Role? | `motion`, `roleMotion` | 90 (all of them) |
+| `scene` | Does the whole thing work together? | all 13 | 960 |
+
+The workflow is the order above: find a settled Composition, then a background that supports it,
+then choreography that reads, then validate the whole Scene. The gallery opens on `composition` and
+the mode bar shows what each Mode varies and how many Banners it has.
+
+One renderer serves all four. A Mode decides two things — whether a Timeline is built, and whether
+the background sheets run:
+
+| Mode | Timeline | background sheets | foreground |
+|---|---|---|---|
+| `composition` | none | held | still |
+| `background` | none | running | still |
+| `motion` | built | running | moving |
+| `scene` | built | running | moving |
+
+Composition mode needs no special code to be a still: every Element already sits at its settled pose
+in CSS, and the Timeline is only what moves it away from that pose. Not building one *is* the
+settled Composition. See `docs/adr/0003`.
+
+A Mode that pins most of its axes has a space small enough to cover completely, so it is covered
+completely: `background` has 10 × 4 = 40 Banners and `motion` has 18 × 5 = 90. The two big Modes are
+sampled by the coverage-aware round-robin below.
+
+**A Vote in one Mode is not comparable with a Vote in another.** They answer different questions, so
+`analyze.mjs` reports per Mode and never pools, and every Vote records the Mode it was cast in.
+
+`--modes` limits a build: `node build.mjs --modes scene` reproduces the original single-mode deck.
 
 ## Design space
 
 16 palettes × 10 layouts × 10 backgrounds × 4 background energies × 10 type treatments ×
 7 badges × 7 CTAs × 7 product treatments × 10 decor sets × 18 motions × 5 role-motion
-distributions × 14 copy sets × 225 photos = 6.2 × 10¹³ combinations. `build.mjs` samples it
-with a coverage-aware round-robin, so every value of every axis appears roughly equally often
-in the 960.
+distributions × 14 copy sets × 225 photos = 6.2 × 10¹³ combinations. The two big Modes are
+sampled from it with a coverage-aware round-robin, so every value of every axis appears roughly
+equally often; the two small Modes are covered completely.
 
-`space.mjs` exports the axis list as `AXES`, and the build summary, the gallery filters and
-`analyze.mjs` all import it — an axis cannot be visible in one and missing from another.
+`space.mjs` exports the axis list as `AXES`, and the build summary, the gallery's filters and
+`analyze.mjs` all import it — an axis cannot be visible in one and missing from another. That is
+not a tidiness point: `gallery.js` used to keep its own hand-written copy of the list, and when
+two axes were added that copy silently dropped them from every card and every Vote, and nothing
+failed. `gtest.mjs` now asserts the shape of a Vote, so the next one fails loudly.
 
 - **Palettes** are 16 hand-tuned sets built only from the KoKitchen tokens in
   `../brand/tokens.css`: `{mode, slide[3], panel, ink, accent, accent2, muted, onAccent}`.
@@ -126,33 +170,46 @@ loses two of its seven product treatments.
 ## Feedback model
 
 A vote is not stored against a banner id alone. `POST /feedback` writes the verdict *plus the
-banner's full axis vector* to `feedback.jsonl`. `analyze.mjs` then joins votes to axis values
-and ranks by the Wilson lower bound of the win rate (love = 1, good = 0.6, maybe = 0.3,
-no = 0), which keeps a 5-vote 100 % combination from outranking a 40-vote 80 % one.
+banner's full axis vector* **and the Mode it was cast in** to `feedback.jsonl`. `analyze.mjs` then
+joins votes to axis values and ranks by the Wilson lower bound of the win rate (love = 1, good =
+0.6, maybe = 0.3, no = 0), which keeps a 5-vote 100 % combination from outranking a 40-vote 80 % one.
+
+**Votes are reported per Mode and never pooled.** A vote in `composition` answers "does this design
+work as a still?" and a vote in `motion` answers "does the choreography read?"; averaging the two
+produces a number that answers neither. `report.md` therefore has one section per Mode, each with
+only that Mode's axes, its own coverage table, and its own loved/rejected list.
 
 Output: `report.md` — best and worst single axis values, best and worst pairs, ranked by
 lower bound, with `--min` / `--min-pair` sample-size floors.
 
 ## Files
 
-- `space.mjs` — every axis value and nothing else. No filesystem, so the browser imports the
-  same constants the sampler used; if these two ever disagreed, a banner would render as
-  something other than what was sampled.
+- `space.mjs` — every axis value and nothing else, plus `MODES`, `REFERENCE` and `variesIn()`.
+  No filesystem, so the browser imports the same constants the sampler used; if these two ever
+  disagreed, a banner would render as something other than what was sampled.
 - `gen.mjs` — the sampler. Re-exports `space.mjs` and adds `generate()` / `loadPhotos()`.
-- `lab.js` — `renderBanner(spec)`, `buildMotion(root, spec)`, `measure()`, `fitType()`,
-  `fitCopy()`, `dodgeCopy()`. The only place that touches the DOM.
+  Mode-aware: it deals only the axes a Mode varies and pins the rest to the Reference Scene.
+- `lab.js` — `renderBanner(spec)`, `animate(root, spec)`, `freezeBackground(root)`, `measure()`,
+  `fitType()`, `fitCopy()`, `dodgeCopy()`. The only place that touches the DOM. `animate()` is the
+  Mode-aware entry point: it returns `null` for a Mode with no Timeline, and freezes the sheets for
+  a Mode with a frozen background.
 - `lab.css` — the design system: `@font-face`, `.bn` shell, `--u` unit, sliding backgrounds,
   decor, product treatments, the copy panel, type, CTAs, badges, layouts.
-- `build.mjs` — multi-seed builder → `banners.json`.
-- `gallery.{html,js,css}` — voting UI: 120-card pages, deterministic shuffle, axis filters,
-  per-card note, motion pause, export.
-- `analyze.mjs` — votes → `report.md`.
+- `build.mjs` — multi-seed, multi-Mode builder → `banners.json`. Prints, per Mode, what it varied
+  and what it held, and flags any axis it claimed to hold that is not in fact constant.
+- `gallery.{html,js,css}` — voting UI: mode bar, 120-card pages, deterministic shuffle, per-Mode
+  axis filters, per-card note, motion pause, export.
+- `analyze.mjs` — votes → `report.md`, segmented by Mode.
 - `audit.mjs` / `audit.html` — renders every banner off-screen and measures text contrast
   against the surface it is actually painted on, overflow, safe area, copy/media collision,
-  and whether the background layers are animating at all.
+  and whether the background layers are animating at all. It never builds a Timeline, so it has
+  always measured the settled Composition and needed no change for Modes.
 - `motions.mjs` / `motions.html` — builds all 18 motions and asserts every element is either in
   the same pose at both ends of the loop or invisible at both.
-- `sheet.html`, `one.html`, `strip.html` — contact sheet, single banner, motion arc.
+- `gtest.mjs` — mounts the gallery, switches Mode, votes, and asserts the Mode's behaviour and the
+  shape of the Vote that lands in `feedback.jsonl`.
+- `sheet.html`, `one.html`, `strip.html` — contact sheet, single banner, motion arc. All three go
+  through `animate()`, so a still Mode renders as a still.
 - `serve.mjs` — static server + `POST /feedback` + `GET /feedback`.
 
 ## Known limits
@@ -166,3 +223,15 @@ lower bound, with `--min` / `--min-pair` sample-size floors.
   photo pixels underneath.
 - Decorations that are gradients report a transparent `backgroundColor`, so the audit
   composites them at zero. `dodgeCopy` still keeps them clear of the copy.
+- **Screenshots on this box are not reproducible.** Two captures of a completely static page
+  differ across 98 % of their pixels (mean 22/255) on the software rasterizer here, so
+  frame-to-frame pixel diffs cannot be used to decide whether something moved. Mode behaviour is
+  therefore asserted from DOM and animation state (`getComputedStyle().transform`, the sheets'
+  `Animation.playState`), which is deterministic, and not from screenshots.
+- **The background's slide phase is not seekable.** `--energy` is timeline-driven, but each
+  sheet's `translateX` is still a CSS animation on the wall clock, so a contact sheet shows each
+  card mid-slide at an arbitrary position unless the sheets are paused. Composition mode pauses
+  them; the other Modes do not.
+- **The Reference Scene is a placeholder.** Background and Motion mode hold it fixed, so their
+  results are only as meaningful as that one composition. It is declared in `space.mjs` and should
+  be re-pointed at the winner of Composition mode once that Mode has votes.

@@ -60,6 +60,11 @@ aspect classes, and survives text stress tests. A winner in the banner lab is **
 Blueprint — see `screen-ad-generator/references/corpus-roadmap.md`.
 _Avoid_: template, recipe, pattern, winner
 
+**Mode**: the question a deck of Banners asks, expressed as the axes it is allowed to vary while
+it holds everything else fixed. Four, in workflow order: **Composition**, **Background**,
+**Motion**, **Scene**. A Mode is a property of the lab's deck, not of a Scene.
+_Avoid_: tab, view, filter, variant, test
+
 ## Relationships
 
 - **Brand → both**: `brand/tokens.css` is the palette seam. A change there changes both
@@ -68,3 +73,8 @@ _Avoid_: template, recipe, pattern, winner
   combinations work; the generator ships. Nothing the lab renders is a deliverable.
 - **Blueprint boundary**: a lab Banner is synthetic, so it can never satisfy the corpus
   roadmap's promotion rule. Lab findings become *evidence for a blueprint*, never a blueprint.
+- **Mode order is a dependency order**: a Composition is judged before a Background is chosen for
+  it, and a Background before choreography is judged over it, because each later question assumes
+  the earlier answer. Judging Motion over an unsettled Composition measures the Composition.
+- **Votes do not cross Modes.** A Vote is about the axes its Mode varies; pooling a Composition
+  Vote with a Motion Vote averages two different questions into one answer that means neither.

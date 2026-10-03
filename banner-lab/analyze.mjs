@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { AXES } from "./space.mjs";
+import { AXES, MODES, MODE_NAMES, variesIn } from "./space.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -53,11 +53,18 @@ function lowerBound(wins, n, z = 1.96) {
   return (p + (z * z) / (2 * n) - z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / d;
 }
 
-function tally(keyFn) {
+/**
+ * Group the votes of ONE Mode by some key.
+ *
+ * The mode is a required argument rather than an optional filter, because pooling modes is the
+ * failure this is here to prevent: a `composition` vote and a `motion` vote answer different
+ * questions, and an average of the two answers neither.
+ */
+function tally(keyFn, mode) {
   const groups = new Map();
   for (const rec of votes.values()) {
     const b = byId.get(rec.id);
-    if (!b) continue;
+    if (!b || modeOf(rec) !== mode) continue;
     for (const key of keyFn(b, axisOf(b))) {
       if (!groups.has(key)) groups.set(key, { n: 0, sum: 0, loves: 0, nos: 0 });
       const g = groups.get(key);
@@ -72,81 +79,101 @@ function tally(keyFn) {
     .sort((a, b) => b.lb - a.lb || b.n - a.n);
 }
 
+/**
+ * Which Mode a vote belongs to. The deck is authoritative; `rec.mode` is the fallback for a vote
+ * whose banner has since been rebuilt out of the deck, and `scene` is the fallback for a vote
+ * cast before Modes existed at all.
+ */
+const modeOf = (rec) => byId.get(rec.id)?.mode || rec.mode || "scene";
+
+const describe = (b) => AXES.map((k) => `${k}=${k === "copy" ? b.copy.key : b[k]}`).join(" ");
+
 const fmt = (r) => `| ${r.key} | ${r.n} | ${(r.mean * 100).toFixed(0)}% | ${(r.lb * 100).toFixed(0)}% | ${r.loves} | ${r.nos} |`;
 
 const lines = [];
 lines.push("# Banner lab — what the votes say", "");
 lines.push(`Banners: ${banners.length}. Votes: ${votes.size}. Scoring: love=1, good=.6, maybe=.3, no=0.`);
 lines.push(`Ranked by Wilson lower bound, so a 2-vote fluke cannot outrank a 40-vote result. Tables need n ≥ ${MIN}.`, "");
+lines.push(
+  "Votes are reported per Mode and never pooled across them. A `composition` vote answers " +
+  "\"does this design work as a still?\", a `motion` vote answers \"does the choreography read?\", and " +
+  "an average of the two answers neither.",
+  "",
+);
 
 if (!votes.size) {
   lines.push("No votes yet. Open the gallery, vote on banners, then run this again.", "");
 }
 
-for (const axis of AXES) {
-  const rows = tally((b, a) => [a[axis]]).filter((r) => r.n >= MIN);
-  if (!rows.length) continue;
-  lines.push(`## ${axis}`, "", "| value | n | mean | lower bound | 🔥 | ✗ |", "|---|---|---|---|---|---|");
-  lines.push(...rows.map(fmt));
+for (const mode of MODE_NAMES) {
+  const mine = [...votes.values()].filter((r) => modeOf(r) === mode);
+  if (!mine.length) continue;
+  const varies = variesIn(mode);
+  // Only the axes this Mode varies. A table for an axis the Mode holds still would have one row.
+  const axes = AXES.filter((a) => varies.has(a));
+  const deck = banners.filter((b) => (b.mode ?? "scene") === mode);
+
+  lines.push(`# Mode: ${MODES[mode].label} — ${mine.length} vote${mine.length === 1 ? "" : "s"}`, "");
+  lines.push(`_${MODES[mode].question}_`, "");
+  lines.push(`Varies ${axes.join(", ")}.`, "");
+
+  for (const axis of axes) {
+    const rows = tally((b, a) => [a[axis]], mode).filter((r) => r.n >= MIN);
+    if (!rows.length) continue;
+    lines.push(`## ${axis}`, "", "| value | n | mean | lower bound | 🔥 | ✗ |", "|---|---|---|---|---|---|");
+    lines.push(...rows.map(fmt));
+    lines.push("");
+  }
+
+  // the pairs are the point: a single axis rarely decides a design on its own
+  const PAIRS = [];
+  for (let i = 0; i < axes.length; i++) {
+    for (let j = i + 1; j < axes.length; j++) PAIRS.push([axes[i], axes[j]]);
+  }
+  const pairRows = [];
+  for (const [x, y] of PAIRS) {
+    for (const r of tally((b, a) => [`${a[x]} × ${a[y]}`], mode).filter((r) => r.n >= MIN_PAIR)) pairRows.push({ ...r, x, y });
+  }
+  pairRows.sort((a, b) => b.lb - a.lb || b.n - a.n);
+
+  lines.push(`## combinations (${pairRows.length} with n ≥ ${MIN_PAIR})`, "");
+  if (pairRows.length) {
+    lines.push("### best", "", "| combination | n | mean | lower bound | 🔥 | ✗ |", "|---|---|---|---|---|---|");
+    lines.push(...pairRows.slice(0, 40).map(fmt));
+    lines.push("", "### worst", "", "| combination | n | mean | lower bound | 🔥 | ✗ |", "|---|---|---|---|---|---|");
+    lines.push(...pairRows.slice(-25).reverse().map(fmt));
+  } else {
+    lines.push(`Nothing yet — no combination has ${MIN_PAIR} votes. Vote on more banners, or lower --min-pair.`);
+  }
+  lines.push("");
+
+  // how much of the design space has actually been seen, so an axis is not judged on its
+  // two most-voted values
+  lines.push("## coverage", "", "| axis | distinct values voted | banners available |", "|---|---|---|");
+  for (const k of axes) {
+    const distinct = new Set(mine.map((r) => byId.get(r.id)).filter(Boolean).map((b) => (k === "copy" ? b.copy.key : String(b[k])))).size;
+    const total = new Set(deck.map((b) => (k === "copy" ? b.copy.key : String(b[k])))).size;
+    lines.push(`| ${k} | ${distinct} | ${total} |`);
+  }
+  lines.push("");
+
+  // the whole axis vector of the best and worst banners, so the winner is reproducible
+  const scored = mine
+    .map((rec) => ({ rec, b: byId.get(rec.id) }))
+    .filter((s) => s.b)
+    .map((s) => ({ ...s, score: SCORE[s.rec.verdict] }));
+  scored.sort((a, b) => b.score - a.score);
+
+  lines.push("### loved", "");
+  for (const s of scored.filter((s) => s.rec.verdict === "love")) {
+    lines.push(`- \`${s.b.id}\` ${describe(s.b)}${s.rec.comment ? ` — _${s.rec.comment}_` : ""}`);
+  }
+  lines.push("", "### rejected", "");
+  for (const s of scored.filter((s) => s.rec.verdict === "no")) {
+    lines.push(`- \`${s.b.id}\` ${describe(s.b)}${s.rec.comment ? ` — _${s.rec.comment}_` : ""}`);
+  }
   lines.push("");
 }
-
-// the pairs are the point: a single axis rarely decides a design on its own
-const PAIRS = [];
-for (let i = 0; i < AXES.length; i++) {
-  for (let j = i + 1; j < AXES.length; j++) PAIRS.push([AXES[i], AXES[j]]);
-}
-const pairRows = [];
-for (const [x, y] of PAIRS) {
-  for (const r of tally((b, a) => [`${a[x]} × ${a[y]}`]).filter((r) => r.n >= MIN_PAIR)) pairRows.push({ ...r, x, y });
-}
-pairRows.sort((a, b) => b.lb - a.lb || b.n - a.n);
-
-lines.push(`## combinations (${pairRows.length} with n ≥ ${MIN_PAIR})`, "");
-if (pairRows.length) {
-  lines.push("### best", "", "| combination | n | mean | lower bound | 🔥 | ✗ |", "|---|---|---|---|---|---|");
-  lines.push(...pairRows.slice(0, 40).map(fmt));
-  lines.push("", "### worst", "", "| combination | n | mean | lower bound | 🔥 | ✗ |", "|---|---|---|---|---|---|");
-  lines.push(...pairRows.slice(-25).reverse().map(fmt));
-} else {
-  lines.push(`Nothing yet — no combination has ${MIN_PAIR} votes. Vote on more banners, or lower --min-pair.`);
-}
-lines.push("");
-
-// how much of the design space has actually been seen, so an axis is not judged on its
-// two most-voted values
-const seen = new Map();
-for (const rec of votes.values()) {
-  const b = byId.get(rec.id);
-  if (!b) continue;
-  for (const k of AXES) seen.set(k, (seen.get(k) || 0) + 1);
-}
-lines.push("## coverage", "", "| axis | distinct values voted | banners available |", "|---|---|---|");
-for (const k of AXES) {
-  const distinct = new Set([...votes.values()].map((r) => byId.get(r.id)).filter(Boolean).map((b) => (k === "copy" ? b.copy.key : String(b[k])))).size;
-  const total = new Set(banners.map((b) => (k === "copy" ? b.copy.key : String(b[k])))).size;
-  lines.push(`| ${k} | ${distinct} | ${total} |`);
-}
-lines.push("");
-
-// the whole axis vector of the best and worst banners, so the winner is reproducible
-const scored = [...votes.values()]
-  .map((rec) => ({ rec, b: byId.get(rec.id) }))
-  .filter((s) => s.b)
-  .map((s) => ({ ...s, score: SCORE[s.rec.verdict] }));
-scored.sort((a, b) => b.score - a.score);
-
-const describe = (b) => AXES.map((k) => `${k}=${k === "copy" ? b.copy.key : b[k]}`).join(" ");
-lines.push("## individual banners", "");
-lines.push("### loved", "");
-for (const s of scored.filter((s) => s.rec.verdict === "love")) {
-  lines.push(`- \`${s.b.id}\` ${describe(s.b)}${s.rec.comment ? ` — _${s.rec.comment}_` : ""}`);
-}
-lines.push("", "### rejected", "");
-for (const s of scored.filter((s) => s.rec.verdict === "no")) {
-  lines.push(`- \`${s.b.id}\` ${describe(s.b)}${s.rec.comment ? ` — _${s.rec.comment}_` : ""}`);
-}
-lines.push("");
 
 const text = lines.join("\n");
 writeFileSync(outPath, text);

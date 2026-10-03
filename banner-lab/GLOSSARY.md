@@ -8,6 +8,19 @@ Timeline, Preset, Blueprint — are defined in the [glossary map](../GLOSSARY-MA
 
 ## The design space
 
+**Mode**: the question a Deck asks, expressed as the axes it is allowed to vary. There are four,
+always in this order: **Composition** (does this design work as a still?), **Background** (does the
+background support the content, or compete with it?), **Motion** (does the choreography read, and
+does it suit each Role?), **Scene** (does the whole thing work together?). One renderer serves all
+four; a Mode decides only whether a Timeline is built and whether the background sheets run.
+_Avoid_: tab, view, filter, variant, test mode
+
+**Reference Scene**: the one axis vector every Mode holds fixed while it studies something else.
+It is declared in `space.mjs` rather than derived from Votes, because the lab had none when the
+Modes were introduced, and it is the thing to re-point once Composition mode has some.
+_Avoid_: baseline, default, control (a control is a *value within* an axis — `flat`, `uniform` —
+not the whole vector around it)
+
 **Design space**: the set of axes the sampler draws from, and the values each axis may take.
 _Avoid_: option space, parameter space, config
 
